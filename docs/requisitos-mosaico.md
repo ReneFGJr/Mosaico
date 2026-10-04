@@ -6,7 +6,7 @@ Prioridades: `P0` fundamento para a primeira etapa; `P1` núcleo das etapas segu
 
 | ID | Prioridade | Requisito resumido | Status nesta entrega | Evidência/teste | Pendências |
 | --- | --- | --- | --- | --- | --- |
-| REQ-01 | P0 | Perfis, permissões por ação/projeto, negação padrão e auditoria | Parcial | `MosaicoFoundationTest`: concessão do produtor e negações por permissão/projeto/usuário | Login, sessão segura, middleware/filtros em cada endpoint, administração de usuários/perfis, auditoria e prevenção de autoaprovação. |
+| REQ-01 | P0 | Perfis, permissões por ação/projeto, negação padrão e auditoria | Parcial | `MosaicoFoundationTest` e `MosaicoAuthTest`: concessão por projeto, negações, login e filtro de rota | Gestão de contas/perfis pela interface, autorização de leitura/escrita completa, auditoria e prevenção de autoaprovação. |
 | REQ-02 | P0 | Projetos, peças, coleções e organização por relações | Parcial | Teste de identidade UUID, código único no projeto e vínculo de coleção planejado no schema | Hierarquia completa, múltiplos cursos, relações entre peças, responsáveis e prevenção de ciclos. |
 | REQ-03 | P0 | Metadados essenciais, vocabulários e qualidade | Parcial | Teste de vocabulário, termo e classificação da peça | Dicionário completo, direitos, acessibilidade, metadados técnicos, revisões históricas e validação por etapa. |
 | REQ-04 | P1 | Ingestão privada, validação, checksum, quarentena e prévias | Planejado | Sem teste nesta etapa | Adaptador de armazenamento, scanner, cotas, upload retomável e processamento isolado. |
@@ -14,11 +14,11 @@ Prioridades: `P0` fundamento para a primeira etapa; `P1` núcleo das etapas segu
 | REQ-06 | P1 | Entregas, revisão, aprovação e publicação registrada | Planejado | Sem teste nesta etapa | Workflow validado, manifesto imutável, pareceres, direitos e canais de publicação. |
 | REQ-07 | P1 | Busca textual autorizada, filtros, ficha e reaproveitamento | Planejado | Sem teste nesta etapa | Busca paginada, autorização antes de facetas/totais, download e regras de direitos. |
 | REQ-08 | P1 | Tarefas, comentários, notificações e rotinas de equipe | Planejado | Sem teste nesta etapa | Painéis, tarefas e adaptadores de notificação desativados por padrão. |
-| REQ-09 | P1 | Auditoria, autenticação segura, proteção e governança | Planejado | Hash de senha tem coluna reservada, sem fluxo de autenticação implementado | OIDC/SAML ou login local, MFA conforme suporte, trilha protegida, retenção e resposta a incidentes. |
+| REQ-09 | P1 | Auditoria, autenticação segura, proteção e governança | Parcial | Login local com `password_verify`, regeneração de sessão, CSRF global, rota protegida e bootstrap CLI sem senha padrão | OIDC/SAML, MFA conforme suporte, recuperação/revogação avançada, trilha protegida, retenção e resposta a incidentes. |
 | REQ-10 | P1 | Integridade, backup, restauração, retenção e descarte | Planejado | Sem teste nesta etapa | Rotinas verificáveis, cópias independentes, teste de restauração, política, RPO/RTO pactuados. |
 | REQ-11 | P0 | Modelo relacional com chaves, índices e integridade | Parcial | Migration `CreateMosaicoFoundation` executada em SQLite nos testes | Completar entidades previstas no modelo de dados, revisar dialetos e testar migration no banco operacional. |
 | REQ-12 | P2 | API versionada, OpenAPI, importação e exportação | Planejado | Sem teste nesta etapa | Definição dos consumidores e formatos de interoperabilidade. |
-| REQ-13 | P1 | Interface acessível/responsiva, operação e desempenho | Planejado | Sem teste nesta etapa | Fluxos UI, WCAG 2.2 AA, filas, health checks, métricas e carga pactuada. |
+| REQ-13 | P1 | Interface acessível/responsiva, operação e desempenho | Parcial | Login, projetos, catálogo e vocabulários em português; navegação por teclado, rótulos e estilos responsivos; smoke test de renderização | Fluxos completos, avaliação WCAG 2.2 AA, filas, health checks, métricas e carga pactuada. |
 | REQ-14 | P0 | Incrementos, documentação, configuração e testes reproduzíveis | Parcial | PHPUnit existente e testes de integração da fundação | CI, `.env.example` validado em instalação limpa, documentação operacional/API e testes ponta a ponta. |
 
 ## Hipóteses e pendências institucionais
