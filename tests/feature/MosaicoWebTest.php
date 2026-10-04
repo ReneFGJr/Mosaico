@@ -37,6 +37,34 @@ final class MosaicoWebTest extends CIUnitTestCase
         $response->assertRedirectTo('/login');
     }
 
+    public function testOversizedUploadIsRejectedBeforeCsrfWithFriendlyMessage(): void
+    {
+        $limit = 9 * 1024 * 1024;
+        $response = $this->withHeaders([
+            'Content-Type' => 'multipart/form-data; boundary=test',
+            'Content-Length' => (string) $limit,
+            'Referer' => 'http://example.com/index.php/colecoes/teste',
+        ])->withSession([
+            'user_id' => '00000000-0000-4000-8000-000000000001',
+            'user_name' => 'Pessoa teste',
+        ])->post('/colecoes/b73be2c7-4b0c-47ec-abbc-a4affd7c0fbc/arquivos', []);
+
+        $response->assertRedirect();
+        $this->assertStringContainsString('excede o limite total', (string) session('error'));
+    }
+
+    public function testInvalidCsrfRedirectsBackWithoutTechnicalException(): void
+    {
+        $response = $this->withHeaders(['Referer' => 'http://example.com/index.php/painel'])
+            ->withSession([
+                'user_id' => '00000000-0000-4000-8000-000000000001',
+                'user_name' => 'Pessoa teste',
+            ])->post('/logout', []);
+
+        $response->assertRedirect();
+        $this->assertSame('O formulário expirou. Atualize a página e tente novamente.', session('error'));
+    }
+
     public function testAuthenticatedUserCanSeeDashboard(): void
     {
         $response = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
@@ -147,6 +175,7 @@ final class MosaicoWebTest extends CIUnitTestCase
         $collectionResponse->assertSee('Comunidade filtrada');
         $collectionResponse->assertSee('Peça vinculada');
         $collectionResponse->assertSee('Peça sem a palavra-chave');
+        $collectionResponse->assertSee('Peças (2)');
         $collectionResponse->assertSee('Saúde digital');
         $collectionResponse->assertDontSee('Peça fora da coleção');
         $collectionResponse->assertSee('/pecas/nova?collection=' . $collection['id']);
@@ -173,6 +202,7 @@ final class MosaicoWebTest extends CIUnitTestCase
         $filteredResponse->assertSee('Saúde digital');
         $filteredResponse->assertSee('Remover filtro');
         $filteredResponse->assertSee('Peça vinculada');
+        $filteredResponse->assertSee('Peças (1)');
         $filteredResponse->assertDontSee('Peça sem a palavra-chave');
 
         $thumbnailResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])

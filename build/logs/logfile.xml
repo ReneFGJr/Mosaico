@@ -1,32 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite name="D:\Projeto\Mosaico\phpunit.dist.xml" tests="16" assertions="103" errors="0" failures="0" skipped="0" time="0.484057">
-    <testsuite name="App" tests="16" assertions="103" errors="0" failures="0" skipped="0" time="0.484057">
-      <testsuite name="ExampleDatabaseTest" file="D:\Projeto\Mosaico\tests\database\ExampleDatabaseTest.php" tests="2" assertions="3" errors="0" failures="0" skipped="0" time="0.057279">
-        <testcase name="testModelFindAll" file="D:\Projeto\Mosaico\tests\database\ExampleDatabaseTest.php" line="17" class="ExampleDatabaseTest" classname="ExampleDatabaseTest" assertions="1" time="0.049754"/>
-        <testcase name="testSoftDeleteLeavesRow" file="D:\Projeto\Mosaico\tests\database\ExampleDatabaseTest.php" line="28" class="ExampleDatabaseTest" classname="ExampleDatabaseTest" assertions="2" time="0.007524"/>
+  <testsuite name="D:\Projeto\Mosaico\phpunit.dist.xml" tests="18" assertions="107" errors="0" failures="0" skipped="0" time="0.482018">
+    <testsuite name="App" tests="18" assertions="107" errors="0" failures="0" skipped="0" time="0.482018">
+      <testsuite name="ExampleDatabaseTest" file="D:\Projeto\Mosaico\tests\database\ExampleDatabaseTest.php" tests="2" assertions="3" errors="0" failures="0" skipped="0" time="0.041489">
+        <testcase name="testModelFindAll" file="D:\Projeto\Mosaico\tests\database\ExampleDatabaseTest.php" line="17" class="ExampleDatabaseTest" classname="ExampleDatabaseTest" assertions="1" time="0.033947"/>
+        <testcase name="testSoftDeleteLeavesRow" file="D:\Projeto\Mosaico\tests\database\ExampleDatabaseTest.php" line="28" class="ExampleDatabaseTest" classname="ExampleDatabaseTest" assertions="2" time="0.007542"/>
       </testsuite>
-      <testsuite name="MosaicoFoundationTest" file="D:\Projeto\Mosaico\tests\database\MosaicoFoundationTest.php" tests="3" assertions="9" errors="0" failures="0" skipped="0" time="0.119735">
-        <testcase name="testPieceHasStableIdentityAndUniqueProjectCode" file="D:\Projeto\Mosaico\tests\database\MosaicoFoundationTest.php" line="22" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="4" time="0.025724"/>
-        <testcase name="testControlledTermCanBeAssignedToPiece" file="D:\Projeto\Mosaico\tests\database\MosaicoFoundationTest.php" line="56" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="1" time="0.021406"/>
-        <testcase name="testProjectPermissionsAreScopedAndDeniedByDefault" file="D:\Projeto\Mosaico\tests\database\MosaicoFoundationTest.php" line="94" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="4" time="0.072605"/>
+      <testsuite name="MosaicoFoundationTest" file="D:\Projeto\Mosaico\tests\database\MosaicoFoundationTest.php" tests="3" assertions="9" errors="0" failures="0" skipped="0" time="0.117421">
+        <testcase name="testPieceHasStableIdentityAndUniqueProjectCode" file="D:\Projeto\Mosaico\tests\database\MosaicoFoundationTest.php" line="22" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="4" time="0.025567"/>
+        <testcase name="testControlledTermCanBeAssignedToPiece" file="D:\Projeto\Mosaico\tests\database\MosaicoFoundationTest.php" line="56" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="1" time="0.021441"/>
+        <testcase name="testProjectPermissionsAreScopedAndDeniedByDefault" file="D:\Projeto\Mosaico\tests\database\MosaicoFoundationTest.php" line="94" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="4" time="0.070412"/>
       </testsuite>
-      <testsuite name="MosaicoWebTest" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" tests="8" assertions="87" errors="0" failures="0" skipped="0" time="0.300698">
-        <testcase name="testLoginPageIsPublic" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="21" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.038687"/>
-        <testcase name="testDashboardRedirectsAnonymousVisitorToLogin" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="28" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.025233"/>
-        <testcase name="testExpiredSessionOnProtectedPostRedirectsToLoginBeforeCsrfValidation" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="33" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.024693"/>
-        <testcase name="testAuthenticatedUserCanSeeDashboard" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="40" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="8" time="0.025167"/>
-        <testcase name="testRepositoryCoreTablesExist" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="54" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="4" time="0.017486"/>
-        <testcase name="testCommunityListOffersCommunitySelection" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="61" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="7" time="0.024732"/>
-        <testcase name="testCommunityDetailsOffersManagementActions" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="81" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="10" time="0.028302"/>
-        <testcase name="testCollectionPiecesPageOnlyShowsLinkedPieces" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="112" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="52" time="0.116399"/>
+      <testsuite name="MosaicoWebTest" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" tests="10" assertions="91" errors="0" failures="0" skipped="0" time="0.315899">
+        <testcase name="testLoginPageIsPublic" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="21" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.032815"/>
+        <testcase name="testDashboardRedirectsAnonymousVisitorToLogin" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="28" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.021955"/>
+        <testcase name="testExpiredSessionOnProtectedPostRedirectsToLoginBeforeCsrfValidation" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="33" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.022695"/>
+        <testcase name="testOversizedUploadIsRejectedBeforeCsrfWithFriendlyMessage" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="40" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.023607"/>
+        <testcase name="testInvalidCsrfRedirectsBackWithoutTechnicalException" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="56" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.023210"/>
+        <testcase name="testAuthenticatedUserCanSeeDashboard" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="68" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="8" time="0.022741"/>
+        <testcase name="testRepositoryCoreTablesExist" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="82" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="4" time="0.017621"/>
+        <testcase name="testCommunityListOffersCommunitySelection" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="89" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="7" time="0.023688"/>
+        <testcase name="testCommunityDetailsOffersManagementActions" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="109" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="10" time="0.026391"/>
+        <testcase name="testCollectionPiecesPageOnlyShowsLinkedPieces" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="140" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="52" time="0.101176"/>
       </testsuite>
-      <testsuite name="ExampleSessionTest" file="D:\Projeto\Mosaico\tests\session\ExampleSessionTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.002331">
-        <testcase name="testSessionSimple" file="D:\Projeto\Mosaico\tests\session\ExampleSessionTest.php" line="10" class="ExampleSessionTest" classname="ExampleSessionTest" assertions="1" time="0.002331"/>
+      <testsuite name="ExampleSessionTest" file="D:\Projeto\Mosaico\tests\session\ExampleSessionTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.002234">
+        <testcase name="testSessionSimple" file="D:\Projeto\Mosaico\tests\session\ExampleSessionTest.php" line="10" class="ExampleSessionTest" classname="ExampleSessionTest" assertions="1" time="0.002234"/>
       </testsuite>
-      <testsuite name="HealthTest" file="D:\Projeto\Mosaico\tests\unit\HealthTest.php" tests="2" assertions="3" errors="0" failures="0" skipped="0" time="0.004014">
-        <testcase name="testIsDefinedAppPath" file="D:\Projeto\Mosaico\tests\unit\HealthTest.php" line="12" class="HealthTest" classname="HealthTest" assertions="1" time="0.001702"/>
-        <testcase name="testBaseUrlHasBeenSet" file="D:\Projeto\Mosaico\tests\unit\HealthTest.php" line="17" class="HealthTest" classname="HealthTest" assertions="2" time="0.002312"/>
+      <testsuite name="HealthTest" file="D:\Projeto\Mosaico\tests\unit\HealthTest.php" tests="2" assertions="3" errors="0" failures="0" skipped="0" time="0.004975">
+        <testcase name="testIsDefinedAppPath" file="D:\Projeto\Mosaico\tests\unit\HealthTest.php" line="12" class="HealthTest" classname="HealthTest" assertions="1" time="0.002508"/>
+        <testcase name="testBaseUrlHasBeenSet" file="D:\Projeto\Mosaico\tests\unit\HealthTest.php" line="17" class="HealthTest" classname="HealthTest" assertions="2" time="0.002467"/>
       </testsuite>
     </testsuite>
   </testsuite>

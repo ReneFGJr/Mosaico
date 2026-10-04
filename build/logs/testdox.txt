@@ -18,6 +18,8 @@ Mosaico Web
  [x] Login page is public
  [x] Dashboard redirects anonymous visitor to login
  [x] Expired session on protected post redirects to login before csrf validation
+ [x] Oversized upload is rejected before csrf with friendly message
+ [x] Invalid csrf redirects back without technical exception
  [x] Authenticated user can see dashboard
  [x] Repository core tables exist
  [x] Community list offers community selection

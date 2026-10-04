@@ -1,5 +1,15 @@
 # NAVBAR.md — Diretrizes do Menu Superior
 
+## Estado atual implementado
+
+- Desktop: navbar fixa de `72px`, padding `0`, logo `240×64px`, marca com margem esquerda `32px` e usuário com margem direita `32px`.
+- Até `850px`: navbar de `64px`, logo `190×56px` e margens laterais de `16px`.
+- `body` e sidebar acompanham exatamente a altura da navbar.
+- A navbar contém apenas logo, nome resumido do usuário e logout.
+- O footer, não a navbar, concentra todas as mensagens no Status.
+- Logout usa `POST` e CSRF. Sessão expirada em qualquer rota protegida redireciona para `/login` antes da validação CSRF.
+- A sidebar contextual usa os cookies de comunidade e coleção para habilitar “Comunidade”, “Coleção” e “Peças”; esses itens nunca migram para a navbar.
+
 ## 1. Finalidade
 
 O menu superior do **MOSAICO — Repositório de Ativos Digitais** deve identificar o sistema, oferecer acesso às ações globais da sessão e ocupar o mínimo de espaço vertical necessário.

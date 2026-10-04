@@ -1,5 +1,16 @@
 # COMUNIDADES.md — Diretrizes das Comunidades
 
+## Estado atual implementado
+
+- Rotas canônicas: `/comunidades`, `/comunidades/nova`, `/comunidades/{id}`, `/editar`, `/permissoes`, `/visibilidade`, `/excluir` e `/colecoes/nova`.
+- Rotas legadas `/projetos...` apenas redirecionam para `/comunidades...`.
+- A criação associa o autor como `administrator`; `memberships` relaciona comunidade, usuário e papel.
+- A seleção grava `mosaico_selected_community` por 30 dias com `HttpOnly`, `SameSite=Lax` e `Secure` em HTTPS, então abre `/comunidades/{id}`.
+- Na listagem, o menu contém “Editar dados”, “Permissões”, “Visibilidade” e “Excluir”; não contém “Criar coleção” nem “Ver comunidade”.
+- Na página da comunidade, “Criar coleção” é o primeiro item do menu de ações e a grade mostra somente as coleções dessa comunidade.
+- Exclusão é lógica: `status=excluded` e `visibility=excluded`, preservando conteúdo e auditoria.
+- Sessão expirada redireciona ao login antes do CSRF; mensagens aparecem somente no Status do footer.
+
 ## 1. Conceito
 
 Uma **Comunidade** é o nível organizacional superior do MOSAICO. Ela reúne coleções, peças, ativos e entregas relacionados a uma instituição, programa, campanha ou finalidade comum.
@@ -64,9 +75,7 @@ O menu de ações deve:
 - solicitar confirmação antes da exclusão lógica;
 - permanecer utilizável por teclado e apresentar foco visível.
 
-A ação “Nova coleção” deve carregar explicitamente o ID da comunidade na URL:
-
-`/comunidades/{community_id}/colecoes/nova`
+Na listagem geral não mostre “Nova coleção” nem “Criar coleção”. A criação deve partir da página da comunidade e carregar explicitamente o ID na URL `/comunidades/{community_id}/colecoes/nova`.
 
 A seleção de comunidade deve ocorrer por `POST` com CSRF, salvar somente o UUID em cookie de navegação `HttpOnly` e `SameSite=Lax`, validar o UUID novamente no servidor sempre que for utilizado e abrir a comunidade selecionada. O cookie não concede autorização e não deve armazenar dados pessoais.
 
@@ -81,7 +90,6 @@ A página `/comunidades/{community_id}` deve apresentar:
 - identificação e descrição da comunidade;
 - suas coleções em cartões, com seleção contextual;
 - ação para criar coleção;
-- ação para cadastrar peça;
 - breadcrumbs para retornar à lista de comunidades.
 - menu suspenso com “Criar coleção” como primeiro item, seguido de “Editar dados”, “Visibilidade” e “Excluir”.
 
@@ -136,7 +144,7 @@ Cada evento deve conter data, hora, usuário, entidade, ID e contexto suficiente
 Antes de concluir mudanças em Comunidades, confirme que:
 
 - o termo “Projeto” não aparece como nome da entidade na interface;
-- a listagem permite abrir a comunidade e criar uma coleção diretamente;
+- a listagem permite selecionar a comunidade, e a criação de coleção parte da página da comunidade;
 - a nova coleção fica vinculada à comunidade correta;
 - códigos duplicados são rejeitados;
 - rotas exigem autenticação e autorização;

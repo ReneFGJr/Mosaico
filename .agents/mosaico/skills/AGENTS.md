@@ -1,5 +1,25 @@
 # AGENTS.md — MOSAICO
 
+## Estado atual obrigatório
+
+As regras desta seção descrevem a implementação vigente e prevalecem sobre referências históricas incompatíveis existentes neste documento.
+
+- Framework: CodeIgniter 4, PHP 8.3, MySQL em produção e SQLite em memória nos testes PHPUnit.
+- Front-end: HTML semântico, CSS próprio e JavaScript progressivo; Bootstrap não é uma dependência obrigatória atual.
+- Estrutura: `Comunidade (projects) → Coleção (collections) → Peça (pieces) → Ativo (assets) → Versão (asset_versions) → Arquivo (repository_files)`.
+- `piece_collections` associa peças e coleções; `piece_terms` associa peças e termos; `terms.vocabulary_id` organiza termos em categorias de `vocabularies`.
+- Arquivos privados ficam em `writable/repository`; miniaturas ficam em `writable/thumbnails`; nunca exponha `storage_key` ou caminho físico.
+- `renditions` registra derivados técnicos. Imagens processáveis geram miniatura JPEG `640×360`; outros formatos usam SVG seguro de fallback.
+- `/pecas/{id}/preview` serve, por rota autenticada, previews inline de imagens seguras, MP4/WebM, MP3/WAV/OGG e PDF. Outros formatos exibem fallback.
+- Upload múltiplo aceita até 20 arquivos, 100 MB por arquivo e lote configurado até 2100 MB. Extensões atuais: PDF, PNG, JPG/JPEG, GIF, WebP, MP4, WebM, MP3, WAV, OGG, DOCX, XLSX, PPTX, TXT e CSV.
+- Duplicidade é verificada por SHA-256 na mesma comunidade. Conteúdo existente é restaurado para `draft`, ligado à coleção e recebe os termos selecionados, sem criar outro binário.
+- A navbar mede `72px` no desktop e `64px` até `850px`. A sidebar mede `250px`. O footer possui mínimo de `56px`.
+- Mensagens temporárias aparecem somente no Status do footer.
+- Sessão expirada redireciona para `/login` antes do CSRF. CSRF inválido volta à página com mensagem amigável, sem tela técnica.
+- Cookies `mosaico_selected_community` e `mosaico_selected_collection` guardam somente UUIDs por 30 dias, com `HttpOnly`, `SameSite=Lax` e `Secure` em HTTPS; cookies não concedem autorização.
+- Na página da peça, usuários com `pieces.update` sincronizam vínculos de termos; somente `vocabularies.manage` permite criar palavras-chave e categorias.
+- O esquema vigente de acesso usa `users`, `roles`, `permissions`, `role_permissions` e `memberships`. A auditoria usa `audit_events`.
+
 ## Escopo
 
 Estas instruções se aplicam ao desenvolvimento e à manutenção do **MOSAICO — Repositório de Ativos Digitais**. Preserve esse nome e não invente outra expansão para a marca.
@@ -48,10 +68,10 @@ Não trate peça, ativo, versão, arquivo, rendição, entrega ou publicação c
 - Uma entrega pertence a uma peça e deve manter vínculos rastreáveis com sua coleção e comunidade.
 - Permita vários arquivos por item quando todos estiverem associados às versões correspondentes.
 - Ao importar conteúdo do Google Drive, copie o arquivo para o repositório do MOSAICO e remova o vínculo externo após uma importação confirmada. Não dependa do arquivo remoto como cópia oficial.
-- Gere automaticamente miniaturas para vídeos, imagens e PDFs após o upload. Armazene-as como rendições vinculadas ao original.
+- Gere miniaturas persistidas para imagens processáveis. Para vídeo, áudio, PDF e documentos, mantenha o fallback seguro até existir um gerador específico implementado e testado.
 - Use vocabulário controlado, padronizado e hierárquico para classificar peças, ativos e coleções.
 - Não exclua fisicamente peças. Oculte-as, preserve os registros e mantenha a trilha de auditoria. Somente administradores podem ocultá-las.
-- Admita os estados `rascunho`, `submetido`, `aprovado`, `publicado`, `arquivado` e `excluído`. Somente administradores podem definir `arquivado` ou `excluído`.
+- Na persistência, preserve os estados vigentes `draft`, `submitted`, `approved`, `published`, `archived` e `deleted`; traduza os rótulos apenas na interface.
 - Exija metadados nos itens, incluindo ao menos título, descrição, autor, datas, palavras-chave, categoria e idioma quando aplicáveis.
 - Somente administradores podem alterar a visibilidade de um item.
 - Registre ações, eventos e alterações com data, hora, usuário e justificativa em uma trilha de auditoria imutável.
@@ -59,32 +79,27 @@ Não trate peça, ativo, versão, arquivo, rendição, entrega ou publicação c
 
 ## Usuários, papéis e permissões
 
-Considere os papéis de administrador, gestor, autor, revisor, editor, consultor, visitante e curador no domínio. Ao implementar persistência e autorização:
-
-- Use `users` com `id`, `nome`, `email`, `senha_hash`, `papel_id`, `criado_em` e `atualizado_em`.
-- Use `users_roles`, `users_permissions` e `users_roles_permissions`.
-- Em `users_roles_permissions`, inclua início e fim de vigência para permissões temporárias.
-- Use `users_logs` para registrar login, logout, criação, edição, submissão, aprovação, publicação e demais ações relevantes.
+O esquema atual usa `users`, `roles`, `permissions`, `role_permissions`, `memberships` e `audit_events`. Preserve os papéis `administrator`, `repository_manager`, `producer_editor`, `reviewer`, `coordinator_approver`, `publisher`, `consultation` e `auditor`, além das permissões `projects.manage`, `pieces.create`, `pieces.read`, `pieces.update` e `vocabularies.manage`.
 - Nunca armazene senha reversível; utilize hash de senha moderno e seguro.
 - Proteja nome e e-mail com criptografia autenticada usando chave fornecida por configuração de ambiente. Não registre esses valores em texto puro nos logs.
 - Não versione segredos nem valores reais de arquivos `.env`.
-- Se `papel_id` for mantido como enum, preserve os valores definidos pelo esquema existente. Não reduza os papéis do domínio sem validar a compatibilidade com `users_roles`.
+- Não reduza nem renomeie papéis e permissões sem migration e validação de compatibilidade com `memberships` e `role_permissions`.
 - Aplique autorização no servidor, mesmo quando a interface ocultar ações não permitidas.
 
 ## Arquivos e armazenamento
 
-- Armazene uploads sob `public/_repository/{community}/{collection}/{item}` ou na abstração equivalente já adotada pelo projeto.
+- Armazene uploads em `writable/repository/{community}/{collection}/{item}` ou na abstração privada equivalente já adotada pelo projeto.
 - Bloqueie execução de arquivos enviados pelo usuário.
 - Valide extensão, MIME detectado, assinatura do arquivo, tamanho e nome seguro no servidor.
 - Gere e persista SHA-256 para verificação de integridade.
-- Prefira armazenamento fora da raiz pública. Quando a estrutura existente exigir `public/_repository`, aplique configuração explícita do servidor para impedir execução e acesso indevido.
+- Mantenha armazenamento fora da raiz pública e entregue conteúdo somente por controller autenticado e autorizado.
 - Trate originais como imutáveis; correções devem produzir novas versões.
 
 ## Tecnologias e padrões
 
 - Banco de dados: MySQL.
 - Back-end: PHP e APIs RESTful.
-- Front-end: HTML, CSS, JavaScript e Bootstrap.
+- Front-end: HTML semântico, CSS próprio e JavaScript progressivo.
 - Código PHP: PSR-1, PSR-4, PSR-7 e PSR-12. Não introduza código novo baseado em PSR-2 quando PSR-12 for aplicável.
 - Testes: PHPUnit, cobrindo unidades, integrações e fluxos funcionais.
 - Infraestrutura: Apache ou Nginx com HTTPS.
@@ -98,10 +113,10 @@ Antes de introduzir bibliotecas, frameworks, estrutura de pastas ou convenções
 
 - Produza interfaces responsivas, acessíveis e amigáveis, com instruções passo a passo e mensagens de erro claras.
 - Use Open Sans, tamanho-base de `16px`, salvo quando o design existente definir tokens equivalentes.
-- Preserve a paleta de referência: fundo `#f2eadb`, texto `#333333`, primária `#007bff`, sucesso `#28a745`, erro `#dc3545`, aviso `#ffc107` e informação `#17a2b8`.
+- Preserve os tokens atuais: fundo `#f2eadb`, superfície `#ffffff`, texto `#292927`, primária `#075ea8`, primária escura `#064b84`, sucesso `#237a3b`, erro `#b42318` e foco/aviso `#f0b429`.
 - Garanta contraste acessível; ajuste cores quando necessário para cumprir WCAG.
 - Campos, checkboxes, radios e selects devem ter borda preta arredondada com raio de `4px`, respeitando estados de foco visíveis.
-- Use navbar superior branca de `60px`, sidebar branca de `250px` e footer cinza-claro de `40px` quando compatíveis com a tela e o layout responsivo.
+- Use navbar branca de `72px` no desktop e `64px` no mobile, sidebar branca de `250px` e footer cinza-claro com mínimo de `56px`.
 - Links devem ser legíveis, possuir estado de foco e apresentar sublinhado no hover.
 - Inclua navegação clara, breadcrumbs e feedback visual. Feedback sonoro deve ser opcional e acessível.
 - Não use elementos fixos de modo que ocultem conteúdo, prejudiquem telas pequenas ou impeçam navegação por teclado.

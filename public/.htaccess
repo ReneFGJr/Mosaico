@@ -47,3 +47,12 @@ Options -Indexes
 # Disable server signature start
 ServerSignature Off
 # Disable server signature end
+
+# Uploads múltiplos: cada arquivo pode ter até 100 MB.
+<IfModule php_module>
+	php_value upload_max_filesize 100M
+	php_value post_max_size 2100M
+	php_value max_file_uploads 20
+	php_value max_execution_time 600
+	php_value max_input_time 600
+</IfModule>

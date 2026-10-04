@@ -1,5 +1,17 @@
 # COLLECTIONS.md — Diretrizes das Coleções
 
+## Estado atual implementado
+
+- Rotas principais: criação em `/comunidades/{id}/colecoes/nova`, seleção em `/colecoes/{id}/selecionar`, página em `/colecoes/{id}`, upload em `/colecoes/{id}/arquivos` e remoção de vínculos Draft em `/colecoes/{id}/pecas/remover-rascunhos`.
+- A página oferece `Lista`, `Detalhes`, `Miniatura` e `Cards`; palavras-chave são links de filtro por `?term=` e preservam `?view=`.
+- O rótulo “Peças” exibe entre parênteses a quantidade atualmente apresentada; com filtro ativo, a contagem corresponde ao resultado filtrado.
+- Upload múltiplo aceita arrastar/soltar, até 20 arquivos, 100 MB por arquivo e lote do servidor até 2100 MB.
+- Arquivos ficam em `writable/repository`, fora da raiz pública.
+- SHA-256 repetido na mesma comunidade restaura a peça para `draft`, garante o vínculo e reaplica termos sem duplicar o arquivo.
+- Na página da peça há preview privado à direita para imagem, vídeo, áudio e PDF, com fallback para outros formatos.
+- Palavras-chave podem ser vinculadas ou desvinculadas da peça. Desvincular não apaga o termo global. Categorias correspondem a `vocabularies` e exigem `vocabularies.manage` para criação.
+- Sessão expirada redireciona ao login; token CSRF expirado e lote acima do limite retornam mensagens amigáveis no Status do footer.
+
 ## 1. Conceito
 
 Uma **Coleção** é um agrupamento organizado de peças, ativos e entregas dentro de uma Comunidade. Ela representa uma finalidade editorial, temática, pedagógica ou operacional comum.
@@ -82,7 +94,8 @@ Não solicite novamente a comunidade em um campo selecionável quando o fluxo j�
 - Cada card de peça deve apresentar uma miniatura em proporção `16:9`. Quando não houver rendição visual disponível, gere uma miniatura segura baseada no título e no tipo, sem expor o arquivo original privado.
 - Para peças com arquivo de imagem, use uma função `findOrCreate`: reutilize a miniatura existente ou gere um JPEG `640×360`, preserve a proporção com margens, armazene em `writable/thumbnails`, calcule SHA-256 e registre a rendição vinculada ao arquivo de origem. Use o SVG de fallback somente quando não houver imagem processável.
 - Disponibilize à direita uma área de upload múltiplo. Cada arquivo aceito deve criar uma Peça, um Ativo, uma Versão inicial e um registro de Arquivo, mantendo a hierarquia e impedindo arquivos órfãos.
-- Armazene binários fora da raiz pública, valide extensão, MIME detectado e limite de tamanho, calcule SHA-256 e registre auditoria.
+- Mantenha `upload_max_filesize` compatível com o limite de 100 MB por arquivo e `post_max_size` compatível com o lote múltiplo. Se o corpo exceder o limite do servidor, intercepte a requisição antes do CSRF e mostre uma mensagem clara no Status do footer.
+- Armazene binários em `writable/repository`, fora da raiz pública; valide extensão, MIME detectado e limite de tamanho, calcule SHA-256 e registre auditoria.
 - Permita selecionar arquivos pelo diálogo ou arrastá-los para uma zona de upload acessível.
 - Antes de salvar, calcule o SHA-256 no arquivo temporário. Quando o conteúdo já existir na mesma comunidade, restaure a peça existente para `draft` e garanta seu vínculo com a coleção, sem criar outro arquivo nem reportar duplicidade como erro.
 - Processe cada arquivo em transação independente; uma falha não pode invalidar ou contaminar os uploads seguintes do mesmo lote.
@@ -90,6 +103,8 @@ Não solicite novamente a comunidade em um campo selecionável quando o fluxo j�
 - No upload em grupo, permita selecionar termos ativos existentes por checkbox e informar novas palavras-chave separadas por vírgula, ponto e vírgula ou linha.
 - Crie novas palavras-chave no vocabulário controlado `keywords` e vincule todos os termos selecionados ou criados a cada peça do grupo por `piece_terms`.
 - Ao restaurar um arquivo duplicado para `draft`, aplique também as palavras-chave escolhidas, sem duplicar relações existentes.
+- Na página da peça, usuários com `pieces.update` podem sincronizar termos existentes; criação de termos e categorias exige `vocabularies.manage`.
+- A rota `/pecas/{piece_id}/preview` deve permanecer autenticada e nunca revelar `storage_key` ou caminhos físicos.
 - Enquanto houver coleção selecionada, o item “Peças” da sidebar deve apontar para a rota filtrada dessa coleção.
 - No menu lateral, apresente “Peças” como link somente quando houver uma coleção selecionada no cookie de navegação. Sem coleção selecionada, mostre “Peças” em cinza, sem link, com `aria-disabled="true"` e orientação acessível para selecionar uma coleção.
 - Mostre também o item “Coleção” entre “Comunidade” e “Peças”. Com uma coleção selecionada, ele deve abrir o contexto da coleção; sem seleção, deve aparecer em cinza, sem link e com `aria-disabled="true"`.
