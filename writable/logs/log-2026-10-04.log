@@ -255367,3 +255367,5 @@ in SYSTEMPATH\Database\SQLite3\Connection.php on line 163.
 19 VENDORPATH\bin\phpunit(122): include('D:\\Projeto\\Mosaico\\vendor\\phpunit\\phpunit\\phpunit')
 INFO - 2026-10-04 23:10:22 --> CSRF token verified.
 INFO - 2026-10-04 23:10:22 --> CSRF token verified.
+DEBUG - 2026-10-04 23:10:52 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2026-10-04 23:10:52 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.

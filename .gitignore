@@ -19,3 +19,4 @@ application/logs/*
 /vendor/
 /writable
 /writable
+/writable/logs
