@@ -1,0 +1,9 @@
+<?= $this->extend('layouts/main') ?><?= $this->section('content') ?>
+<p class="eyebrow">Catálogo</p><h1>Nova peça</h1><p>Cadastre os metadados essenciais. A peça receberá identidade estável.</p>
+<form method="post" class="form-card stack"><?= csrf_field() ?>
+<div class="form-row"><label>Comunidade<select name="project_id" required><option value="">Selecione</option><?php foreach ($projects as $project): ?><option value="<?= esc($project['id']) ?>" <?= old('project_id', $selectedProjectId) === $project['id'] ? 'selected' : '' ?>><?= esc($project['name']) ?></option><?php endforeach ?></select></label><label>Coleção (opcional)<select name="collection_id"><option value="">Sem coleção</option><?php foreach ($collections as $collection): ?><option value="<?= esc($collection['id']) ?>" <?= old('collection_id', $selectedCollectionId) === $collection['id'] ? 'selected' : '' ?>><?= esc($collection['name']) ?></option><?php endforeach ?></select></label></div>
+<div class="form-row"><label>Código<input name="code" value="<?= esc(old('code')) ?>" required></label><label>Tipo<select name="type" required><option value="video">Vídeo</option><option value="cartilha">Cartilha</option><option value="audio">Áudio</option><option value="imagem">Imagem</option><option value="curso">Curso</option><option value="outro">Outro</option></select></label></div>
+<label>Título<input name="title" value="<?= esc(old('title')) ?>" required maxlength="255"></label><label>Descrição<textarea name="summary" rows="5" required><?= esc(old('summary')) ?></textarea></label>
+<div class="form-row"><label>Finalidade pedagógica<input name="pedagogical_purpose" value="<?= esc(old('pedagogical_purpose')) ?>"></label><label>Público-alvo<input name="audience" value="<?= esc(old('audience')) ?>"></label></div>
+<div class="actions"><button class="button">Cadastrar peça</button><a href="<?= site_url('pecas') ?>">Cancelar</a></div></form>
+<?= $this->endSection() ?>

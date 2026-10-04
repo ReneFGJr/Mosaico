@@ -1,0 +1,4 @@
+<?= $this->extend('layouts/main') ?><?= $this->section('content') ?>
+<nav class="breadcrumbs"><a href="<?= site_url('pecas/'.$asset['piece_id']) ?>"><?= esc($asset['piece_title']) ?></a><span>/</span><span><?= esc($asset['name']) ?></span></nav><h1>Registrar nova versão</h1><p>Versões submetidas são registros imutáveis. Descreva o que mudou.</p>
+<form method="post" class="form-card stack"><?= csrf_field() ?><label>Justificativa e alterações<textarea name="change_notes" rows="7" required placeholder="Descreva as mudanças desta versão..."><?= esc(old('change_notes')) ?></textarea></label><div class="notice">O envio de arquivos binários será habilitado quando o armazenamento privado estiver configurado. Esta etapa registra a versão lógica com rastreabilidade.</div><div class="actions"><button class="button">Registrar versão</button><a href="<?= site_url('pecas/'.$asset['piece_id']) ?>">Cancelar</a></div></form>
+<?= $this->endSection() ?>

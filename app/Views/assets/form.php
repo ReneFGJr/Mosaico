@@ -1,0 +1,4 @@
+<?= $this->extend('layouts/main') ?><?= $this->section('content') ?>
+<nav class="breadcrumbs"><a href="<?= site_url('pecas/'.$piece['id']) ?>"><?= esc($piece['title']) ?></a><span>/</span><span>Novo ativo</span></nav><h1>Novo ativo</h1>
+<form method="post" class="form-card stack"><?= csrf_field() ?><label>Nome<input name="name" value="<?= esc(old('name')) ?>" required></label><label>Tipo<select name="type"><option value="roteiro">Roteiro</option><option value="video_bruto">Vídeo bruto</option><option value="editavel">Projeto editável</option><option value="trilha">Trilha</option><option value="final">Versão final</option><option value="outro">Outro</option></select></label><label>Descrição<textarea name="description" rows="5"><?= esc(old('description')) ?></textarea></label><div class="actions"><button class="button">Criar ativo</button><a href="<?= site_url('pecas/'.$piece['id']) ?>">Cancelar</a></div></form>
+<?= $this->endSection() ?>

@@ -1,0 +1,32 @@
+.button.cancel-button,
+.button.cancel-button:visited {
+    background: #b54708;
+    border-color: #b54708;
+    color: #fff !important;
+    text-decoration: none;
+}
+
+.button.cancel-button:hover,
+.button.cancel-button:focus,
+.button.cancel-button:active {
+    background: #93370d;
+    border-color: #93370d;
+    color: #fff !important;
+    text-decoration: none;
+}
+
+.button.danger-button,
+.button.danger-button:visited {
+    background: #b42318;
+    border-color: #b42318;
+    color: #fff !important;
+    text-decoration: none;
+}
+
+.button.danger-button:hover,
+.button.danger-button:focus,
+.button.danger-button:active {
+    background: #8f1d14;
+    border-color: #8f1d14;
+    text-decoration: none;
+}

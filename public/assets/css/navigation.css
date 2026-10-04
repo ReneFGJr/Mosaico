@@ -1,0 +1,9 @@
+.sidebar .nav-disabled {
+    display: block;
+    padding: .75rem;
+    border-radius: 4px;
+    color: #8a8984;
+    cursor: not-allowed;
+    font-weight: 600;
+    opacity: .75;
+}

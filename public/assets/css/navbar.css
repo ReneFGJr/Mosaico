@@ -1,0 +1,43 @@
+.navbar {
+    height: 72px;
+    padding: 0;
+}
+
+.brand {
+    margin-left: 32px;
+}
+
+.brand img {
+    width: 240px;
+    height: 64px;
+    object-fit: contain;
+    object-position: left center;
+}
+
+body {
+    padding-top: 72px;
+}
+
+.sidebar {
+    top: 72px;
+}
+
+@media (max-width: 850px) {
+    .navbar {
+        height: 64px;
+        padding: 0;
+    }
+
+    .brand {
+        margin-left: 16px;
+    }
+
+    .brand img {
+        width: 190px;
+        height: 56px;
+    }
+
+    body {
+        padding-top: 64px;
+    }
+}

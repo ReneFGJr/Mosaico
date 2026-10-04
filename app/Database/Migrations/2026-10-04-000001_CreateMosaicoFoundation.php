@@ -190,9 +190,9 @@ class CreateMosaicoFoundation extends Migration
             'auditor'              => 'Auditor',
         ];
         $permissions = [
-            'projects.manage'     => 'Gerenciar projetos e coleções',
+            'projects.manage'     => 'Gerenciar comunidades e coleções',
             'pieces.create'       => 'Cadastrar peças',
-            'pieces.read'         => 'Consultar peças do projeto',
+            'pieces.read'         => 'Consultar peças da comunidade',
             'pieces.update'       => 'Editar metadados de peças',
             'vocabularies.manage' => 'Gerenciar vocabulários',
         ];

@@ -10,7 +10,7 @@ Aplicação CodeIgniter 4 para organização de peças digitais do programa Mais
 3. Execute `php spark migrate`.
 4. Defina `MOSAICO_BOOTSTRAP_PASSWORD` no ambiente do processo com uma senha de pelo menos 12 caracteres e execute:
 
-	`php spark mosaico:bootstrap PROJETO "Projeto inicial" admin@example.org "Gestor inicial"`
+	`php spark mosaico:bootstrap COMUNIDADE "Comunidade inicial" admin@example.org "Gestor inicial"`
 
 5. Inicie com `php spark serve` e acesse `/login`.
 

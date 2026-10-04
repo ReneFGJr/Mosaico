@@ -14,3 +14,13 @@ Mosaico Foundation
  [x] Controlled term can be assigned to piece
  [x] Project permissions are scoped and denied by default
 
+Mosaico Web
+ [x] Login page is public
+ [x] Dashboard redirects anonymous visitor to login
+ [x] Expired session on protected post redirects to login before csrf validation
+ [x] Authenticated user can see dashboard
+ [x] Repository core tables exist
+ [x] Community list offers community selection
+ [x] Community details offers management actions
+ [x] Collection pieces page only shows linked pieces
+
