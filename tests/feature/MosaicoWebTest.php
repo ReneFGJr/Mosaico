@@ -184,6 +184,8 @@ final class MosaicoWebTest extends CIUnitTestCase
         $collectionResponse->assertSee('multiple');
         $collectionResponse->assertSee('Arraste os arquivos');
         $collectionResponse->assertSee('data-drop-zone');
+        $collectionResponse->assertSee('.mp4,.webm,.avi');
+        $collectionResponse->assertSee('Limite de 1 GB por arquivo');
         $collectionResponse->assertSee('Palavras-chave do grupo');
         $collectionResponse->assertSee('name="new_keywords"');
         $collectionResponse->assertSee('/pecas/' . $linkedPiece['id'] . '/miniatura');

@@ -5,10 +5,10 @@
 - Rotas principais: criação em `/comunidades/{id}/colecoes/nova`, seleção em `/colecoes/{id}/selecionar`, página em `/colecoes/{id}`, upload em `/colecoes/{id}/arquivos` e remoção de vínculos Draft em `/colecoes/{id}/pecas/remover-rascunhos`.
 - A página oferece `Lista`, `Detalhes`, `Miniatura` e `Cards`; palavras-chave são links de filtro por `?term=` e preservam `?view=`.
 - O rótulo “Peças” exibe entre parênteses a quantidade atualmente apresentada; com filtro ativo, a contagem corresponde ao resultado filtrado.
-- Upload múltiplo aceita arrastar/soltar, até 20 arquivos, 100 MB por arquivo e lote do servidor até 2100 MB.
+- Upload múltiplo aceita arrastar/soltar, até 20 arquivos, 1 GB por arquivo e lote do servidor até 10 GB, incluindo MP4 e AVI.
 - Arquivos ficam em `writable/repository`, fora da raiz pública.
 - SHA-256 repetido na mesma comunidade restaura a peça para `draft`, garante o vínculo e reaplica termos sem duplicar o arquivo.
-- Na página da peça há preview privado à direita para imagem, vídeo, áudio e PDF, com fallback para outros formatos.
+- Na página da peça há preview privado à direita para imagem, vídeo, áudio e PDF, com fallback para outros formatos. Vídeos e demais arquivos grandes usam streaming autenticado com suporte a HTTP `Range`.
 - Palavras-chave podem ser vinculadas ou desvinculadas da peça. Desvincular não apaga o termo global. Categorias correspondem a `vocabularies` e exigem `vocabularies.manage` para criação.
 - Sessão expirada redireciona ao login; token CSRF expirado e lote acima do limite retornam mensagens amigáveis no Status do footer.
 
@@ -94,7 +94,7 @@ Não solicite novamente a comunidade em um campo selecionável quando o fluxo j�
 - Cada card de peça deve apresentar uma miniatura em proporção `16:9`. Quando não houver rendição visual disponível, gere uma miniatura segura baseada no título e no tipo, sem expor o arquivo original privado.
 - Para peças com arquivo de imagem, use uma função `findOrCreate`: reutilize a miniatura existente ou gere um JPEG `640×360`, preserve a proporção com margens, armazene em `writable/thumbnails`, calcule SHA-256 e registre a rendição vinculada ao arquivo de origem. Use o SVG de fallback somente quando não houver imagem processável.
 - Disponibilize à direita uma área de upload múltiplo. Cada arquivo aceito deve criar uma Peça, um Ativo, uma Versão inicial e um registro de Arquivo, mantendo a hierarquia e impedindo arquivos órfãos.
-- Mantenha `upload_max_filesize` compatível com o limite de 100 MB por arquivo e `post_max_size` compatível com o lote múltiplo. Se o corpo exceder o limite do servidor, intercepte a requisição antes do CSRF e mostre uma mensagem clara no Status do footer.
+- Mantenha `upload_max_filesize` compatível com o limite de 1 GB por arquivo e `post_max_size` compatível com o lote múltiplo de até 10 GB. Se o corpo exceder o limite do servidor, intercepte a requisição antes do CSRF e mostre uma mensagem clara no Status do footer.
 - Armazene binários em `writable/repository`, fora da raiz pública; valide extensão, MIME detectado e limite de tamanho, calcule SHA-256 e registre auditoria.
 - Permita selecionar arquivos pelo diálogo ou arrastá-los para uma zona de upload acessível.
 - Antes de salvar, calcule o SHA-256 no arquivo temporário. Quando o conteúdo já existir na mesma comunidade, restaure a peça existente para `draft` e garanta seu vínculo com a coleção, sem criar outro arquivo nem reportar duplicidade como erro.

@@ -26,3 +26,7 @@ Mosaico Web
  [x] Community details offers management actions
  [x] Collection pieces page only shows linked pieces
 
+Range File Response
+ [x] Streams file without loading it into response body
+ [x] Streams requested byte range
+

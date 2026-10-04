@@ -10,8 +10,8 @@ As regras desta seção descrevem a implementação vigente e prevalecem sobre r
 - `piece_collections` associa peças e coleções; `piece_terms` associa peças e termos; `terms.vocabulary_id` organiza termos em categorias de `vocabularies`.
 - Arquivos privados ficam em `writable/repository`; miniaturas ficam em `writable/thumbnails`; nunca exponha `storage_key` ou caminho físico.
 - `renditions` registra derivados técnicos. Imagens processáveis geram miniatura JPEG `640×360`; outros formatos usam SVG seguro de fallback.
-- `/pecas/{id}/preview` serve, por rota autenticada, previews inline de imagens seguras, MP4/WebM, MP3/WAV/OGG e PDF. Outros formatos exibem fallback.
-- Upload múltiplo aceita até 20 arquivos, 100 MB por arquivo e lote configurado até 2100 MB. Extensões atuais: PDF, PNG, JPG/JPEG, GIF, WebP, MP4, WebM, MP3, WAV, OGG, DOCX, XLSX, PPTX, TXT e CSV.
+- `/pecas/{id}/preview` serve, por rota autenticada, previews inline de imagens seguras, MP4/WebM, MP3/WAV/OGG e PDF. Arquivos grandes devem ser transmitidos em blocos, com suporte ao cabeçalho HTTP `Range`, sem carregá-los integralmente na memória. Outros formatos exibem fallback.
+- Upload múltiplo aceita até 20 arquivos, 1 GB por arquivo e lote configurado até 10 GB. Extensões atuais: PDF, PNG, JPG/JPEG, GIF, WebP, MP4, WebM, AVI, MP3, WAV, OGG, DOCX, XLSX, PPTX, TXT e CSV.
 - Duplicidade é verificada por SHA-256 na mesma comunidade. Conteúdo existente é restaurado para `draft`, ligado à coleção e recebe os termos selecionados, sem criar outro binário.
 - A navbar mede `72px` no desktop e `64px` até `850px`. A sidebar mede `250px`. O footer possui mínimo de `56px`.
 - Mensagens temporárias aparecem somente no Status do footer.

@@ -9,9 +9,9 @@ use App\Models\UuidModel;
 
 final class Collections extends BaseController
 {
-    private const ALLOWED_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'webm', 'mp3', 'wav', 'ogg', 'docx', 'xlsx', 'pptx', 'txt', 'csv'];
+    private const ALLOWED_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'webm', 'avi', 'mp3', 'wav', 'ogg', 'docx', 'xlsx', 'pptx', 'txt', 'csv'];
     private const ALLOWED_MIME_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'text/plain', 'text/csv', 'application/csv'];
-    private const MAX_FILE_SIZE = 104857600;
+    private const MAX_FILE_SIZE = 1073741824;
 
     public function show(string $id): string
     {
@@ -197,12 +197,16 @@ final class Collections extends BaseController
         foreach ($files as $file) {
             $originalName = basename($file->getClientName());
             $extension = strtolower($file->getClientExtension());
-            if (! $file->isValid() || $file->hasMoved()) {
-                $errors[] = $originalName . ': upload inválido.';
+            if (! $file->isValid()) {
+                $errors[] = $originalName . ': ' . $this->uploadErrorMessage($file->getError());
+                continue;
+            }
+            if ($file->hasMoved()) {
+                $errors[] = $originalName . ': o arquivo já foi processado.';
                 continue;
             }
             if ($file->getSize() > self::MAX_FILE_SIZE) {
-                $errors[] = $originalName . ': excede o limite de 100 MB.';
+                $errors[] = $originalName . ': excede o limite de 1 GB por arquivo.';
                 continue;
             }
             if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
@@ -359,5 +363,18 @@ final class Collections extends BaseController
                 $db->table('piece_terms')->insert(['piece_id' => $pieceId, 'term_id' => $termId]);
             }
         }
+    }
+
+    private function uploadErrorMessage(int $error): string
+    {
+        return match ($error) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'excede o limite de tamanho permitido pelo servidor.',
+            UPLOAD_ERR_PARTIAL => 'o envio foi interrompido antes de terminar.',
+            UPLOAD_ERR_NO_FILE => 'nenhum arquivo foi recebido.',
+            UPLOAD_ERR_NO_TMP_DIR => 'o diretório temporário do servidor não está disponível.',
+            UPLOAD_ERR_CANT_WRITE => 'o servidor não conseguiu gravar o arquivo temporário.',
+            UPLOAD_ERR_EXTENSION => 'o envio foi interrompido por uma extensão do servidor.',
+            default => 'não foi possível receber o arquivo.',
+        };
     }
 }

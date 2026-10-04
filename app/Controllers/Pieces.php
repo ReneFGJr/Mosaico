@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\AuditLogger;
 use App\Libraries\PieceThumbnail;
 use App\Libraries\ProjectAccess;
+use App\Libraries\RangeFileResponse;
 use App\Models\PieceModel;
 use App\Models\UuidModel;
 
@@ -142,20 +143,12 @@ final class Pieces extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $contents = file_get_contents($path);
-        if ($contents === false) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        $filename = str_replace(['"', "\r", "\n"], '', basename((string) $file['original_name']));
-
-        return $this->response
-            ->setHeader('Content-Type', (string) $file['mime_type'])
-            ->setHeader('Content-Length', (string) strlen($contents))
-            ->setHeader('Content-Disposition', 'inline; filename="' . $filename . '"')
-            ->setHeader('Cache-Control', 'private, max-age=3600')
-            ->setHeader('X-Content-Type-Options', 'nosniff')
-            ->setBody($contents);
+        return new RangeFileResponse(
+            $path,
+            (string) $file['mime_type'],
+            (string) $file['original_name'],
+            $this->request->getHeaderLine('Range'),
+        );
     }
 
     public function thumbnail(string $id)
