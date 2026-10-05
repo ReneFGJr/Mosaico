@@ -60,6 +60,7 @@ final class Pieces extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
         $assets = $db->table('assets AS piece_assets')->select('piece_assets.*, COUNT(versions.version_number) AS version_count, MAX(versions.version_number) AS latest_version')->join('asset_versions AS versions', 'versions.asset_id = piece_assets.id', 'left')->where('piece_assets.piece_id', $id)->groupBy('piece_assets.id')->orderBy('piece_assets.created_at', 'DESC')->get()->getResultArray();
+        $pieceCollection = $db->table('piece_collections')->select('collection_id')->where('piece_id', $id)->get()->getRowArray();
         $previewFile = $this->findPreviewFile($id);
         $vocabularies = $db->table('vocabularies')->orderBy('name')->get()->getResultArray();
         $terms = $db->table('terms AS keyword_terms')
@@ -76,6 +77,7 @@ final class Pieces extends BaseController
             'title' => $piece['title'],
             'piece' => $piece,
             'assets' => $assets,
+            'backUrl' => $pieceCollection ? site_url('colecoes/' . $pieceCollection['collection_id']) : site_url('pecas'),
             'previewFile' => $previewFile,
             'previewType' => $this->previewType((string) ($previewFile['mime_type'] ?? '')),
             'vocabularies' => $vocabularies,
@@ -190,7 +192,7 @@ SVG;
     private function findPreviewFile(string $pieceId): ?array
     {
         return db_connect()->table('repository_files AS files')
-            ->select('files.id, files.original_name, files.storage_key, files.mime_type, files.size_bytes')
+            ->select('files.id, files.original_name, files.storage_key, files.mime_type, files.size_bytes, versions.version_number')
             ->join('asset_versions AS versions', 'versions.id = files.version_id')
             ->join('assets AS piece_assets', 'piece_assets.id = versions.asset_id')
             ->where('piece_assets.piece_id', $pieceId)

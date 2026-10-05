@@ -3,14 +3,31 @@
 namespace App\Controllers;
 
 use App\Libraries\AuditLogger;
+use App\Libraries\GoogleDriveImporter;
 use App\Models\CollectionModel;
 use App\Models\ProjectModel;
 use App\Models\UuidModel;
 
 final class Collections extends BaseController
 {
-    private const ALLOWED_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'webm', 'avi', 'mp3', 'wav', 'ogg', 'docx', 'xlsx', 'pptx', 'txt', 'csv'];
-    private const ALLOWED_MIME_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'text/plain', 'text/csv', 'application/csv'];
+    private const ALLOWED_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'webm', 'avi', 'mp3', 'wav', 'ogg', 'ods', 'xml', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'];
+    private const ALLOWED_MIME_TYPES = [
+        'application/pdf',
+        'application/xml',
+        'text/xml',
+        'application/msword',
+        'application/vnd.ms-excel',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.ms-office',
+        'application/cdfv2',
+        'application/vnd.oasis.opendocument.spreadsheet',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain',
+        'text/csv',
+        'application/csv',
+    ];
     private const MAX_FILE_SIZE = 1073741824;
 
     public function show(string $id): string
@@ -28,10 +45,17 @@ final class Collections extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $viewMode = (string) $this->request->getGet('view');
-        if (! in_array($viewMode, ['list', 'details', 'thumbnail', 'cards'], true)) {
-            $viewMode = 'cards';
+        $allowedViewModes = ['list', 'details', 'thumbnail', 'cards'];
+        $requestedViewMode = (string) $this->request->getGet('view');
+        if (in_array($requestedViewMode, $allowedViewModes, true)) {
+            $viewMode = $requestedViewMode;
+            $this->response->setCookie('mosaico_collection_view', $viewMode, 60 * 60 * 24 * 365, '', '/', '', $this->request->isSecure(), true, 'Lax');
+        } else {
+            $savedViewMode = (string) $this->request->getCookie('mosaico_collection_view');
+            $viewMode = in_array($savedViewMode, $allowedViewModes, true) ? $savedViewMode : 'thumbnail';
         }
+
+        $query = mb_substr(trim((string) $this->request->getGet('q')), 0, 150);
 
         $selectedTermId = (string) $this->request->getGet('term');
         $selectedTerm = null;
@@ -41,7 +65,6 @@ final class Collections extends BaseController
                 $selectedTermId = '';
             }
         }
-
         $piecesBuilder = $db->table('pieces')
             ->select('pieces.*')
             ->join('piece_collections', 'piece_collections.piece_id = pieces.id')
@@ -49,6 +72,21 @@ final class Collections extends BaseController
         if ($selectedTermId !== '') {
             $piecesBuilder->join('piece_terms AS selected_piece_terms', 'selected_piece_terms.piece_id = pieces.id')
                 ->where('selected_piece_terms.term_id', $selectedTermId);
+        }
+        if ($query !== '') {
+            $piecesBuilder
+                ->distinct()
+                ->join('piece_terms AS search_piece_terms', 'search_piece_terms.piece_id = pieces.id', 'left')
+                ->join('terms AS search_terms', 'search_terms.id = search_piece_terms.term_id AND search_terms.is_active = 1', 'left')
+                ->groupStart()
+                ->like('pieces.title', $query)
+                ->orLike('pieces.code', $query)
+                ->orLike('pieces.summary', $query)
+                ->orLike('pieces.type', $query)
+                ->orLike('pieces.original_filename', $query)
+                ->orLike('pieces.original_directory', $query)
+                ->orLike('search_terms.label', $query)
+                ->groupEnd();
         }
         $pieces = $piecesBuilder->orderBy('pieces.title')->get()->getResultArray();
         $keywordsByPiece = [];
@@ -67,6 +105,19 @@ final class Collections extends BaseController
         }
         foreach ($pieces as &$piece) {
             $piece['keywords'] = $keywordsByPiece[$piece['id']] ?? [];
+            $piece['display_state'] = match (true) {
+                ($piece['access_condition'] ?? null) === 'restricted' => 'restricted',
+                ($piece['access_condition'] ?? null) === 'embargoed' => 'embargoed',
+                $piece['status'] === 'published' => 'published',
+                default => 'draft',
+            };
+            $piece['display_state_label'] = match ($piece['display_state']) {
+                'restricted' => 'Restrito',
+                'embargoed' => 'Embargado',
+                'published' => 'Publicado',
+                default => 'Draft',
+            };
+            $piece['display_state_locked'] = in_array($piece['display_state'], ['restricted', 'embargoed'], true);
         }
         unset($piece);
 
@@ -74,6 +125,7 @@ final class Collections extends BaseController
             'title' => $collection['name'],
             'collection' => $collection,
             'viewMode' => $viewMode,
+            'query' => $query,
             'selectedTerm' => $selectedTerm,
             'pieces' => $pieces,
             'terms' => $db->table('terms')
@@ -119,6 +171,62 @@ final class Collections extends BaseController
         (new AuditLogger())->record('collection.drafts_removed', 'collection', $id, ['piece_ids' => $pieceIds, 'count' => count($pieceIds)]);
 
         return redirect()->to('/colecoes/' . $id)->with('success', count($pieceIds) . (count($pieceIds) === 1 ? ' peça em Draft removida da coleção.' : ' peças em Draft removidas da coleção.'));
+    }
+
+    public function bulkAction(string $id)
+    {
+        $db = db_connect();
+        $collection = $db->table('collections')->where('id', $id)->get()->getRowArray();
+        if (! $collection) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+        if (! $this->canManage((string) $collection['project_id'])) {
+            return redirect()->to('/colecoes/' . $id)->with('error', 'Você não tem permissão para executar ações nesta coleção.');
+        }
+
+        $action = (string) $this->request->getPost('bulk_action');
+        $allowedActions = ['publish', 'embargo', 'restrict', 'remove'];
+        if (! in_array($action, $allowedActions, true)) {
+            return redirect()->to('/colecoes/' . $id)->with('error', 'Selecione uma ação válida.');
+        }
+        $selectedIds = array_values(array_unique(array_filter(
+            (array) $this->request->getPost('piece_ids'),
+            static fn ($value): bool => is_string($value) && preg_match('/^[0-9a-f-]{36}$/i', $value) === 1,
+        )));
+        if ($selectedIds === []) {
+            return redirect()->to('/colecoes/' . $id)->with('error', 'Selecione ao menos uma peça em Draft.');
+        }
+        $pieceIds = array_column($db->table('pieces')
+            ->select('pieces.id')
+            ->join('piece_collections', 'piece_collections.piece_id = pieces.id')
+            ->where('piece_collections.collection_id', $id)
+            ->where('pieces.status', 'draft')
+            ->whereIn('pieces.id', $selectedIds)
+            ->get()->getResultArray(), 'id');
+        if ($pieceIds === []) {
+            return redirect()->to('/colecoes/' . $id)->with('error', 'Nenhuma peça em Draft válida foi selecionada.');
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $labels = [
+            'publish' => 'publicada(s)',
+            'embargo' => 'embargada(s)',
+            'restrict' => 'com acesso restrito',
+            'remove' => 'removida(s) da coleção',
+        ];
+        if ($action === 'remove') {
+            $db->table('piece_collections')->where('collection_id', $id)->whereIn('piece_id', $pieceIds)->delete();
+        } else {
+            $changes = match ($action) {
+                'publish' => ['status' => 'published', 'visibility' => 'public', 'access_condition' => 'public', 'updated_at' => $now],
+                'embargo' => ['visibility' => 'private', 'access_condition' => 'embargoed', 'updated_at' => $now],
+                'restrict' => ['visibility' => 'internal', 'access_condition' => 'restricted', 'updated_at' => $now],
+            };
+            $db->table('pieces')->whereIn('id', $pieceIds)->update($changes);
+        }
+        (new AuditLogger())->record('collection.bulk_action', 'collection', $id, ['action' => $action, 'piece_ids' => $pieceIds, 'count' => count($pieceIds)]);
+
+        return redirect()->to('/colecoes/' . $id)->with('success', count($pieceIds) . ' peça(s) ' . $labels[$action] . '.');
     }
 
     public function create(string $projectId)
@@ -213,7 +321,7 @@ final class Collections extends BaseController
                 $errors[] = $originalName . ': formato não permitido.';
                 continue;
             }
-            $detectedMime = $file->getMimeType();
+            $detectedMime = strtolower($file->getMimeType());
             if (! str_starts_with($detectedMime, 'image/') && ! str_starts_with($detectedMime, 'video/') && ! str_starts_with($detectedMime, 'audio/') && ! in_array($detectedMime, self::ALLOWED_MIME_TYPES, true)) {
                 $errors[] = $originalName . ': tipo de conteúdo não permitido.';
                 continue;
@@ -269,7 +377,7 @@ final class Collections extends BaseController
 
             try {
                 $db->transBegin();
-                $db->table('pieces')->insert(['id' => $pieceId, 'project_id' => $collection['project_id'], 'code' => 'UP-' . strtoupper(substr(str_replace('-', '', $pieceId), 0, 12)), 'title' => $title, 'summary' => 'Criada automaticamente por upload na coleção ' . $collection['name'] . '.', 'type' => $pieceType, 'status' => 'draft', 'visibility' => 'private', 'created_by' => session('user_id'), 'created_at' => $now, 'updated_at' => $now]);
+                $db->table('pieces')->insert(['id' => $pieceId, 'project_id' => $collection['project_id'], 'code' => 'UP-' . strtoupper(substr(str_replace('-', '', $pieceId), 0, 12)), 'title' => $title, 'summary' => 'Criada automaticamente por upload na coleção ' . $collection['name'] . '.', 'type' => $pieceType, 'original_directory' => null, 'original_filename' => $originalName, 'status' => 'draft', 'visibility' => 'private', 'created_by' => session('user_id'), 'created_at' => $now, 'updated_at' => $now]);
                 $db->table('piece_collections')->insert(['piece_id' => $pieceId, 'collection_id' => $id]);
                 $db->table('assets')->insert(['id' => $assetId, 'piece_id' => $pieceId, 'name' => $title, 'type' => $pieceType, 'description' => 'Ativo original enviado para a coleção.', 'created_by' => session('user_id'), 'created_at' => $now, 'updated_at' => $now]);
                 $db->table('asset_versions')->insert(['id' => $versionId, 'asset_id' => $assetId, 'version_number' => 1, 'change_notes' => 'Versão inicial criada por upload.', 'status' => 'draft', 'created_by' => session('user_id'), 'created_at' => $now]);
@@ -305,6 +413,174 @@ final class Collections extends BaseController
             $message .= ' Alguns arquivos foram rejeitados: ' . implode(' ', $errors);
         }
         return redirect()->to('/colecoes/' . $id)->with('success', $message);
+    }
+
+    public function importGoogleDrive(string $id)
+    {
+        ini_set('display_errors', '0');
+        ignore_user_abort(true);
+        set_time_limit(0);
+        $db = db_connect();
+        $collection = $db->table('collections')
+            ->select('collections.*, projects.status AS community_status')
+            ->join('projects', 'projects.id = collections.project_id')
+            ->where('collections.id', $id)
+            ->get()
+            ->getRowArray();
+
+        $this->response->setHeader('Content-Type', 'application/x-ndjson; charset=UTF-8');
+        $this->response->setHeader('Cache-Control', 'no-cache, no-store');
+        $this->response->setHeader('X-Accel-Buffering', 'no');
+        // Send and clear framework-managed headers/cookies before streaming.
+        // The explicit exits below prevent CodeIgniter from sending them again.
+        $this->response->send();
+        $emit = static function (array $event): void {
+            echo json_encode($event, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+            if (ob_get_level() > 0) {
+                @ob_flush();
+            }
+            flush();
+        };
+
+        if (! $collection || $collection['community_status'] === 'excluded') {
+            $emit(['type' => 'fatal', 'message' => 'Coleção indisponível para importação.']);
+            exit;
+        }
+        if (! $this->canManage((string) $collection['project_id'])) {
+            $emit(['type' => 'fatal', 'message' => 'Você não tem permissão para importar arquivos nesta coleção.']);
+            exit;
+        }
+
+        $importer = new GoogleDriveImporter();
+        $folderId = $importer->extractFolderId((string) $this->request->getPost('drive_url'));
+        if ($folderId === null) {
+            $emit(['type' => 'fatal', 'message' => 'Informe uma URL válida de pasta do Google Drive.']);
+            exit;
+        }
+
+        try {
+            $files = $importer->listFiles($folderId);
+            $emit(['type' => 'discovered', 'files' => array_map(static fn (array $file): array => ['id' => $file['id'], 'name' => $file['name']], $files)]);
+            $created = 0;
+            $restored = 0;
+            foreach ($files as $file) {
+                $temporaryPath = tempnam(WRITEPATH . 'cache', 'drive_');
+                if ($temporaryPath === false) {
+                    $emit(['type' => 'file', 'id' => $file['id'], 'name' => $file['name'], 'status' => 'error', 'message' => 'Não foi possível preparar o download.']);
+                    continue;
+                }
+                try {
+                    $emit(['type' => 'file', 'id' => $file['id'], 'name' => $file['name'], 'status' => 'downloading', 'progress' => 0]);
+                    $importer->download($file, $temporaryPath, static function (int $percent, int $current, int $total) use ($emit, $file): void {
+                        $emit(['type' => 'file', 'id' => $file['id'], 'name' => $file['name'], 'status' => 'downloading', 'progress' => $percent, 'bytes' => $current, 'total' => $total]);
+                    });
+                    $result = $this->ingestDriveFile($temporaryPath, (string) $file['name'], $collection, $id);
+                    $created += $result === 'created' ? 1 : 0;
+                    $restored += $result === 'restored' ? 1 : 0;
+                    $emit(['type' => 'file', 'id' => $file['id'], 'name' => $file['name'], 'status' => 'imported', 'message' => $result === 'restored' ? 'Arquivo existente restaurado para Draft.' : 'Copiado para o repositório do MOSAICO.']);
+                } catch (\Throwable $exception) {
+                    $emit(['type' => 'file', 'id' => $file['id'], 'name' => $file['name'], 'status' => 'error', 'message' => $exception->getMessage()]);
+                } finally {
+                    if (is_file($temporaryPath)) {
+                        @unlink($temporaryPath);
+                    }
+                }
+            }
+            (new AuditLogger())->record('collection.google_drive_imported', 'collection', $id, ['folder_id' => $folderId, 'created' => $created, 'restored' => $restored]);
+            $emit([
+                'type' => 'complete',
+                'created' => $created,
+                'restored' => $restored,
+                'message' => 'Importação concluída: ' . $created . ' novo(s), ' . $restored . ' restaurado(s).',
+            ]);
+        } catch (\Throwable $exception) {
+            $emit(['type' => 'fatal', 'message' => $exception->getMessage()]);
+        }
+
+        exit;
+    }
+
+    private function ingestDriveFile(string $sourcePath, string $originalName, array $collection, string $collectionId): string
+    {
+        $db = db_connect();
+        $sourceName = str_replace('\\', '/', trim($originalName));
+        $sourceParts = array_values(array_filter(array_map('trim', explode('/', $sourceName)), static fn (string $part): bool => $part !== ''));
+        $originalName = array_pop($sourceParts) ?: basename($sourceName);
+        $sourceDirectory = $sourceParts === [] ? null : implode('/', $sourceParts);
+        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $size = filesize($sourcePath);
+        if ($size === false || $size === 0) {
+            throw new \RuntimeException('O arquivo recebido está vazio.');
+        }
+        if ($size > self::MAX_FILE_SIZE) {
+            throw new \RuntimeException('O arquivo excede o limite de 1 GB.');
+        }
+        if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
+            throw new \RuntimeException('Formato não permitido.');
+        }
+        $mime = strtolower(mime_content_type($sourcePath) ?: 'application/octet-stream');
+        if (! str_starts_with($mime, 'image/') && ! str_starts_with($mime, 'video/') && ! str_starts_with($mime, 'audio/') && ! in_array($mime, self::ALLOWED_MIME_TYPES, true)) {
+            throw new \RuntimeException('Tipo de conteúdo não permitido.');
+        }
+        $checksum = hash_file('sha256', $sourcePath);
+        if ($checksum === false) {
+            throw new \RuntimeException('Não foi possível calcular o checksum.');
+        }
+        $existingFile = $db->table('repository_files')
+            ->select('repository_files.id AS file_id, assets.piece_id, pieces.project_id')
+            ->join('asset_versions', 'asset_versions.id = repository_files.version_id')
+            ->join('assets', 'assets.id = asset_versions.asset_id')
+            ->join('pieces', 'pieces.id = assets.piece_id')
+            ->where('repository_files.sha256', $checksum)
+            ->get()->getRowArray();
+        if ($existingFile) {
+            if ($existingFile['project_id'] !== $collection['project_id']) {
+                throw new \RuntimeException('Este conteúdo já pertence a outra comunidade.');
+            }
+            $db->table('pieces')->where('id', $existingFile['piece_id'])->update(['status' => 'draft', 'visibility' => 'private', 'updated_at' => date('Y-m-d H:i:s')]);
+            if ($db->table('piece_collections')->where(['piece_id' => $existingFile['piece_id'], 'collection_id' => $collectionId])->countAllResults() === 0) {
+                $db->table('piece_collections')->insert(['piece_id' => $existingFile['piece_id'], 'collection_id' => $collectionId]);
+            }
+            (new AuditLogger())->record('collection.drive_file_restored', 'collection', $collectionId, ['file_id' => $existingFile['file_id'], 'piece_id' => $existingFile['piece_id'], 'sha256' => $checksum]);
+            return 'restored';
+        }
+
+        $pieceId = UuidModel::generateUuid();
+        $assetId = UuidModel::generateUuid();
+        $versionId = UuidModel::generateUuid();
+        $fileId = UuidModel::generateUuid();
+        $relativeDirectory = 'repository/' . $collection['project_id'] . '/' . $collectionId . '/' . $pieceId . '/' . $versionId;
+        $absoluteDirectory = WRITEPATH . str_replace('/', DIRECTORY_SEPARATOR, $relativeDirectory);
+        if (! is_dir($absoluteDirectory) && ! mkdir($absoluteDirectory, 0750, true) && ! is_dir($absoluteDirectory)) {
+            throw new \RuntimeException('Não foi possível preparar o armazenamento.');
+        }
+        $storedName = preg_replace('/[<>:"\/\\|?*\x00-\x1F]/u', '_', $originalName) ?: $fileId . '.' . $extension;
+        $absolutePath = $absoluteDirectory . DIRECTORY_SEPARATOR . $storedName;
+        if (! rename($sourcePath, $absolutePath)) {
+            throw new \RuntimeException('Não foi possível copiar o arquivo para o repositório.');
+        }
+        $now = date('Y-m-d H:i:s');
+        $title = pathinfo($originalName, PATHINFO_FILENAME) ?: 'Arquivo sem título';
+        $pieceType = str_starts_with($mime, 'video/') ? 'video' : (str_starts_with($mime, 'audio/') ? 'audio' : (str_starts_with($mime, 'image/') ? 'imagem' : 'documento'));
+        try {
+            $db->transBegin();
+            $db->table('pieces')->insert(['id' => $pieceId, 'project_id' => $collection['project_id'], 'code' => 'GD-' . strtoupper(substr(str_replace('-', '', $pieceId), 0, 12)), 'title' => $title, 'summary' => 'Importada do Google Drive para a coleção ' . $collection['name'] . '.', 'type' => $pieceType, 'original_directory' => $sourceDirectory ?: null, 'original_filename' => $originalName, 'status' => 'draft', 'visibility' => 'private', 'created_by' => session('user_id'), 'created_at' => $now, 'updated_at' => $now]);
+            $db->table('piece_collections')->insert(['piece_id' => $pieceId, 'collection_id' => $collectionId]);
+            $db->table('assets')->insert(['id' => $assetId, 'piece_id' => $pieceId, 'name' => $title, 'type' => $pieceType, 'description' => 'Ativo original importado do Google Drive.', 'created_by' => session('user_id'), 'created_at' => $now, 'updated_at' => $now]);
+            $db->table('asset_versions')->insert(['id' => $versionId, 'asset_id' => $assetId, 'version_number' => 1, 'change_notes' => 'Versão inicial importada do Google Drive.', 'status' => 'draft', 'created_by' => session('user_id'), 'created_at' => $now]);
+            $db->table('repository_files')->insert(['id' => $fileId, 'version_id' => $versionId, 'original_name' => $originalName, 'storage_key' => $relativeDirectory . '/' . $storedName, 'mime_type' => $mime, 'size_bytes' => $size, 'sha256' => $checksum, 'created_at' => $now]);
+            if (! $db->transStatus()) {
+                throw new \RuntimeException('Falha ao registrar o arquivo no repositório.');
+            }
+            $db->transCommit();
+        } catch (\Throwable $exception) {
+            $db->transRollback();
+            @unlink($absolutePath);
+            throw $exception;
+        }
+        (new AuditLogger())->record('collection.drive_file_imported', 'collection', $collectionId, ['file_id' => $fileId, 'piece_id' => $pieceId, 'sha256' => $checksum, 'original_name' => $originalName]);
+
+        return 'created';
     }
 
     private function canManage(string $projectId): bool

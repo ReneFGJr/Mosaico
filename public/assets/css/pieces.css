@@ -53,6 +53,8 @@
     overflow-wrap: anywhere;
 }
 
+.preview-file-metadata{display:grid;gap:.65rem;margin:1rem 0 0;padding-top:1rem;border-top:1px solid var(--soft)}.preview-file-metadata div{min-width:0}.preview-file-metadata dt{font-size:.75rem;font-weight:800;text-transform:uppercase;color:var(--muted)}.preview-file-metadata dd{margin:.2rem 0 0;overflow-wrap:anywhere}
+
 .keyword-manager fieldset {
     min-width: 0;
     padding: 1rem;

@@ -1,19 +1,3 @@
-Example Database
- [x] Model find all
- [x] Soft delete leaves row
-
-Example Session
- [x] Session simple
-
-Health
- [x] Is defined app path
- [x] Base url has been set
-
-Mosaico Foundation
- [x] Piece has stable identity and unique project code
- [x] Controlled term can be assigned to piece
- [x] Project permissions are scoped and denied by default
-
 Mosaico Web
  [x] Login page is public
  [x] Dashboard redirects anonymous visitor to login
@@ -25,8 +9,4 @@ Mosaico Web
  [x] Community list offers community selection
  [x] Community details offers management actions
  [x] Collection pieces page only shows linked pieces
-
-Range File Response
- [x] Streams file without loading it into response body
- [x] Streams requested byte range
 

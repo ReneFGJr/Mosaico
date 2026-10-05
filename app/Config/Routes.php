@@ -18,7 +18,9 @@ $routes->group('', ['filter' => 'auth'], static function ($routes): void {
     $routes->post('colecoes/(:segment)/selecionar', 'Collections::select/$1');
     $routes->get('colecoes/(:segment)', 'Collections::show/$1');
     $routes->post('colecoes/(:segment)/arquivos', 'Collections::upload/$1');
+    $routes->post('colecoes/(:segment)/google-drive', 'Collections::importGoogleDrive/$1');
     $routes->post('colecoes/(:segment)/pecas/remover-rascunhos', 'Collections::removeDrafts/$1');
+    $routes->post('colecoes/(:segment)/pecas/acoes', 'Collections::bulkAction/$1');
     $routes->match(['get', 'post'], 'comunidades/(:segment)/permissoes', 'Projects::permissions/$1');
     $routes->post('comunidades/(:segment)/visibilidade', 'Projects::visibility/$1');
     $routes->post('comunidades/(:segment)/excluir', 'Projects::delete/$1');
@@ -26,7 +28,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes): void {
     $routes->get('projetos/novo', static fn () => redirect()->to('/comunidades/nova'));
     $routes->get('projetos/(:segment)', static fn (string $id) => redirect()->to('/comunidades/' . $id));
     $routes->get('pecas', 'Pieces::index');
-    $routes->get('colecoes/(:segment)/pecas', 'Pieces::index/$1');
+    $routes->get('colecoes/(:segment)/pecas', static fn (string $id) => redirect()->to('/colecoes/' . $id));
     $routes->match(['get', 'post'], 'pecas/nova', 'Pieces::create');
     $routes->get('pecas/(:segment)', 'Pieces::show/$1');
     $routes->get('pecas/(:segment)/miniatura', 'Pieces::thumbnail/$1');

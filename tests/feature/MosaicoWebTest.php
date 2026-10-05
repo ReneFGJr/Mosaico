@@ -84,6 +84,10 @@ final class MosaicoWebTest extends CIUnitTestCase
         foreach (['assets', 'asset_versions', 'repository_files', 'audit_events'] as $table) {
             $this->assertTrue(db_connect()->tableExists($table), "Tabela {$table} não foi criada.");
         }
+        $pieceFields = db_connect()->getFieldNames('pieces');
+        $this->assertContains('original_directory', $pieceFields);
+        $this->assertContains('original_filename', $pieceFields);
+        $this->assertContains('access_condition', $pieceFields);
     }
 
     public function testCommunityListOffersCommunitySelection(): void
@@ -164,9 +168,7 @@ final class MosaicoWebTest extends CIUnitTestCase
         $response = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
             ->get('/colecoes/' . $collection['id'] . '/pecas');
 
-        $response->assertStatus(200);
-        $response->assertSee('Peça vinculada');
-        $response->assertDontSee('Peça fora da coleção');
+        $response->assertRedirectTo('/colecoes/' . $collection['id']);
 
         $collectionResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
             ->get('/colecoes/' . $collection['id']);
@@ -180,11 +182,16 @@ final class MosaicoWebTest extends CIUnitTestCase
         $collectionResponse->assertDontSee('Peça fora da coleção');
         $collectionResponse->assertSee('/pecas/nova?collection=' . $collection['id']);
         $collectionResponse->assertSee('Enviar arquivos');
+        $collectionResponse->assertSee('Importar do Google Drive');
+        $collectionResponse->assertSee('data-drive-dialog');
+        $collectionResponse->assertSee('/colecoes/' . $collection['id'] . '/google-drive');
+        $collectionResponse->assertSee('name="drive_url"');
         $collectionResponse->assertSee('name="files[]"');
         $collectionResponse->assertSee('multiple');
         $collectionResponse->assertSee('Arraste os arquivos');
         $collectionResponse->assertSee('data-drop-zone');
         $collectionResponse->assertSee('.mp4,.webm,.avi');
+        $collectionResponse->assertSee('.ods,.xml,.doc,.docx,.xls,.xlsx,.ppt,.pptx');
         $collectionResponse->assertSee('Limite de 1 GB por arquivo');
         $collectionResponse->assertSee('Palavras-chave do grupo');
         $collectionResponse->assertSee('name="new_keywords"');
@@ -193,9 +200,34 @@ final class MosaicoWebTest extends CIUnitTestCase
         $collectionResponse->assertSee('Detalhes');
         $collectionResponse->assertSee('Miniatura');
         $collectionResponse->assertSee('Cards');
+        $collectionResponse->assertSee('class="thumbnail-grid"');
+        $collectionResponse->assertSee('Buscar peças');
+        $collectionResponse->assertSee('name="q"');
         $collectionResponse->assertSee('Selecionar todas em Draft');
-        $collectionResponse->assertSee('Remover todas em Draft');
-        $collectionResponse->assertSee('term=' . $term['id']);
+        $collectionResponse->assertDontSee('Remover todas em Draft');
+        $collectionResponse->assertSee('name="bulk_action"');
+        $collectionResponse->assertSee('Publicar');
+        $collectionResponse->assertSee('Embargar');
+        $collectionResponse->assertSee('Restringir acesso');
+        $collectionResponse->assertSee('Remover selecionadas');
+
+        $viewPreferenceResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
+            ->get('/colecoes/' . $collection['id'] . '?view=list');
+        $viewPreferenceResponse->assertCookie('mosaico_collection_view', 'list');
+
+        $searchResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
+            ->get('/colecoes/' . $collection['id'] . '?q=VINCULADA');
+        $searchResponse->assertStatus(200);
+        $searchResponse->assertSee('1 resultado(s)');
+        $searchResponse->assertSee('Peça vinculada');
+        $searchResponse->assertDontSee('Peça sem a palavra-chave');
+
+        $keywordSearchResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
+            ->get('/colecoes/' . $collection['id'] . '?view=thumbnail&q=' . rawurlencode('Saúde digital'));
+        $keywordSearchResponse->assertStatus(200);
+        $keywordSearchResponse->assertSee('1 resultado(s)');
+        $keywordSearchResponse->assertSee('Peça vinculada');
+        $keywordSearchResponse->assertDontSee('Peça sem a palavra-chave');
 
         $filteredResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
             ->get('/colecoes/' . $collection['id'] . '?view=details&term=' . $term['id']);
@@ -206,6 +238,7 @@ final class MosaicoWebTest extends CIUnitTestCase
         $filteredResponse->assertSee('Peça vinculada');
         $filteredResponse->assertSee('Peças (1)');
         $filteredResponse->assertDontSee('Peça sem a palavra-chave');
+        $filteredResponse->assertSee('term=' . $term['id']);
 
         $thumbnailResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
             ->get('/pecas/' . $linkedPiece['id'] . '/miniatura');
@@ -226,6 +259,17 @@ final class MosaicoWebTest extends CIUnitTestCase
             'size_bytes' => 1024,
             'sha256' => str_repeat('a', 64),
         ]);
+        db_connect()->table('pieces')->where('id', $linkedPiece['id'])->update([
+            'original_directory' => 'Materiais/Aulas',
+            'original_filename' => 'video-principal.mp4',
+        ]);
+        $cardResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
+            ->get('/colecoes/' . $collection['id'] . '?view=cards');
+        $cardResponse->assertSee('class="file-extension">MP4</span>');
+        $cardResponse->assertSee('piece-state-draft');
+        $thumbnailCollectionResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
+            ->get('/colecoes/' . $collection['id'] . '?view=thumbnail');
+        $thumbnailCollectionResponse->assertSee('class="file-extension">MP4</span>');
         $managerRole = db_connect()->table('roles')->where('code', 'repository_manager')->get()->getRowArray();
         db_connect()->table('users')->insert([
             'id' => '00000000-0000-4000-8000-000000000001',
@@ -245,6 +289,12 @@ final class MosaicoWebTest extends CIUnitTestCase
         $pieceResponse->assertSee('<video controls preload="metadata">');
         $pieceResponse->assertSee('/pecas/' . $linkedPiece['id'] . '/preview');
         $pieceResponse->assertSee('video-principal.mp4');
+        $pieceResponse->assertSee('>Voltar</a>');
+        $pieceResponse->assertDontSee('Adicionar ativo');
+        $pieceResponse->assertSee('/colecoes/' . $collection['id']);
+        $pieceResponse->assertSee('Versão do arquivo');
+        $pieceResponse->assertSee('Caminho original');
+        $pieceResponse->assertSee('Materiais/Aulas/video-principal.mp4');
         $pieceResponse->assertSee('Salvar palavras-chave');
         $pieceResponse->assertSee('Nova categoria');
 

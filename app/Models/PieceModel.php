@@ -12,10 +12,13 @@ class PieceModel extends UuidModel
         'title',
         'summary',
         'type',
+        'original_directory',
+        'original_filename',
         'pedagogical_purpose',
         'audience',
         'status',
         'visibility',
+        'access_condition',
         'created_by',
     ];
     protected $validationRules = [
