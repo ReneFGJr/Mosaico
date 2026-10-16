@@ -2,14 +2,18 @@
 
 namespace App\Controllers;
 
+use App\Filters\AuthFilter;
 use App\Libraries\AuditLogger;
 
 final class Auth extends BaseController
 {
     public function login()
     {
-        if (session('user_id')) {
+        if (AuthFilter::hasActiveUser()) {
             return redirect()->to('/painel');
+        }
+        if (session()->has('user_id')) {
+            session()->destroy();
         }
 
         if ($this->request->getMethod() === 'POST') {

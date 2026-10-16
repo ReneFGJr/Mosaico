@@ -18,11 +18,46 @@ final class MosaicoWebTest extends CIUnitTestCase
     protected $namespace = 'App';
     protected $refresh = true;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        db_connect()->table('users')->insert([
+            'id'            => '00000000-0000-4000-8000-000000000001',
+            'email'         => 'pessoa-teste@example.test',
+            'display_name'  => 'Pessoa teste',
+            'password_hash' => password_hash('senha-de-teste', PASSWORD_DEFAULT),
+            'is_active'     => true,
+        ]);
+    }
+
     public function testLoginPageIsPublic(): void
     {
         $response = $this->get('/login');
         $response->assertStatus(200);
         $response->assertSee('Bem-vindo ao MOSAICO');
+    }
+
+    public function testExpiredSessionIsDestroyedBeforeProtectedRequest(): void
+    {
+        $response = $this->withSession([
+            'user_id' => '00000000-0000-4000-8000-000000000099',
+            'user_name' => 'Pessoa removida',
+        ])->get('/painel');
+
+        $response->assertRedirectTo('/login');
+        $this->assertNull(session('user_id'));
+    }
+
+    public function testLogoutWithExpiredSessionDoesNotWriteAuditEventForMissingUser(): void
+    {
+        $response = $this->withSession([
+            'user_id' => '00000000-0000-4000-8000-000000000099',
+            'user_name' => 'Pessoa removida',
+        ])->post('/logout');
+
+        $response->assertRedirectTo('/login');
+        $this->assertSame(0, db_connect()->table('audit_events')->countAllResults());
     }
 
     public function testDashboardRedirectsAnonymousVisitorToLogin(): void

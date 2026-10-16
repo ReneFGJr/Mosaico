@@ -35,7 +35,7 @@ FLUSH PRIVILEGES;
 
    A seed cria apenas a conta de usuário e não altera uma conta existente. Para criar também a comunidade inicial e conceder a ela o papel de administrador, use o comando de bootstrap em vez da seed:
 
-`php spark mosaico:bootstrap COMUNIDADE "Comunidade inicial" admin@example.org "Gestor inicial"`
+`php spark mosaico:bootstrap COMUNIDADE "Comunidade inicial" admin@example.org "Administrador"`
 
 No PowerShell, se preferir fornecer a senha pela variável de ambiente do processo, defina `$env:MOSAICO_BOOTSTRAP_PASSWORD = '...'` antes do comando e remova-a depois com `Remove-Item Env:MOSAICO_BOOTSTRAP_PASSWORD`. Não use uma senha real em histórico de comandos ou documentação.
 
