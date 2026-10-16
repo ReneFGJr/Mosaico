@@ -1,6 +1,7 @@
 <?php
 
 use App\Libraries\ProjectAccess;
+use App\Database\Seeds\AdminUserSeeder;
 use App\Models\PieceModel;
 use App\Models\ProjectModel;
 use App\Models\TermModel;
@@ -18,6 +19,39 @@ final class MosaicoFoundationTest extends CIUnitTestCase
 
     protected $namespace = 'App';
     protected $refresh   = true;
+
+    public function testAdminUserSeederUsesConfiguredPasswordAndIsIdempotent(): void
+    {
+        $previousPassword = getenv('MOSAICO_BOOTSTRAP_PASSWORD');
+        putenv('MOSAICO_BOOTSTRAP_PASSWORD=senha-admin-de-teste');
+        $_ENV['MOSAICO_BOOTSTRAP_PASSWORD'] = 'senha-admin-de-teste';
+
+        try {
+            $this->seed(AdminUserSeeder::class);
+
+            $user = db_connect()->table('users')->where('email', 'admin@mosaico.local')->get()->getRowArray();
+
+            $this->assertNotNull($user);
+            $this->assertSame('Administrador', $user['display_name']);
+            $this->assertTrue(password_verify('senha-admin-de-teste', $user['password_hash']));
+
+            $passwordHash = $user['password_hash'];
+            putenv('MOSAICO_BOOTSTRAP_PASSWORD=outra-senha-admin');
+            $_ENV['MOSAICO_BOOTSTRAP_PASSWORD'] = 'outra-senha-admin';
+            $this->seed(AdminUserSeeder::class);
+
+            $this->assertSame(1, db_connect()->table('users')->where('email', 'admin@mosaico.local')->countAllResults());
+            $this->assertSame($passwordHash, db_connect()->table('users')->where('email', 'admin@mosaico.local')->get()->getRowArray()['password_hash']);
+        } finally {
+            if ($previousPassword === false) {
+                putenv('MOSAICO_BOOTSTRAP_PASSWORD');
+                unset($_ENV['MOSAICO_BOOTSTRAP_PASSWORD']);
+            } else {
+                putenv('MOSAICO_BOOTSTRAP_PASSWORD=' . $previousPassword);
+                $_ENV['MOSAICO_BOOTSTRAP_PASSWORD'] = $previousPassword;
+            }
+        }
+    }
 
     public function testPieceHasStableIdentityAndUniqueProjectCode(): void
     {
