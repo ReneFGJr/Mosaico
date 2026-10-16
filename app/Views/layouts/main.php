@@ -6,6 +6,7 @@
     <title><?= esc($title ?? 'MOSAICO') ?> | MOSAICO</title>
     <link rel="icon" href="<?= base_url('favicon.ico') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/mosaico.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/dashboard.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/navbar.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/communities.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/pieces.css') ?>">
@@ -23,12 +24,26 @@
 </header>
 <?php if (session('user_id')): ?>
 <aside class="sidebar" aria-label="Navegação principal">
-    <?php $selectedCommunityCookie = (string) service('request')->getCookie('mosaico_selected_community'); ?>
     <?php $selectedCollectionCookie = (string) service('request')->getCookie('mosaico_selected_collection'); ?>
-    <nav><a href="<?= site_url('painel') ?>">Visão geral</a><?php if ($selectedCommunityCookie !== ''): ?><a href="<?= site_url('comunidades') ?>">Comunidade</a><?php else: ?><span class="nav-disabled" aria-disabled="true" title="Selecione uma comunidade para acessá-la">Comunidade</span><?php endif ?><?php if ($selectedCollectionCookie !== ''): ?><a href="<?= site_url('colecoes/'.$selectedCollectionCookie) ?>">Coleção</a><a href="<?= site_url('colecoes/'.$selectedCollectionCookie) ?>">Peças</a><?php else: ?><span class="nav-disabled" aria-disabled="true" title="Selecione uma coleção para acessá-la">Coleção</span><span class="nav-disabled" aria-disabled="true" title="Selecione uma coleção para acessar as peças">Peças</span><?php endif ?></nav>
+    <?php $communityCount = db_connect()->table('projects')->where('status !=', 'excluded')->countAllResults(); ?>
+    <nav>
+        <a href="<?= site_url('painel') ?>">Visão geral</a>
+        <?php if ($communityCount > 0): ?>
+            <a href="<?= site_url('comunidades') ?>">Comunidade (<?= esc($communityCount) ?>)</a>
+        <?php else: ?>
+            <span class="nav-disabled" aria-disabled="true" title="Nenhuma comunidade cadastrada">Comunidade (0)</span>
+        <?php endif ?>
+        <?php if ($selectedCollectionCookie !== ''): ?>
+            <a href="<?= site_url('colecoes/'.$selectedCollectionCookie) ?>">Coleção</a>
+            <a href="<?= site_url('colecoes/'.$selectedCollectionCookie) ?>">Peças</a>
+        <?php else: ?>
+            <span class="nav-disabled" aria-disabled="true" title="Selecione uma coleção para acessá-la">Coleção</span>
+            <span class="nav-disabled" aria-disabled="true" title="Selecione uma coleção para acessar as peças">Peças</span>
+        <?php endif ?>
+    </nav>
 </aside>
 <?php endif ?>
-<main id="conteudo" class="content <?= session('user_id') ? '' : 'content-auth' ?>" tabindex="-1">
+<main id="conteudo" class="content <?= esc($contentClass ?? '') ?> <?= session('user_id') ? '' : 'content-auth' ?>" tabindex="-1">
     <?= $this->renderSection('content') ?>
 </main>
 <footer class="footer">

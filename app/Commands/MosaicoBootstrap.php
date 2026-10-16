@@ -35,9 +35,10 @@ final class MosaicoBootstrap extends BaseCommand
         $db->transStart();
         $db->table('users')->insert(['id' => $userId, 'email' => mb_strtolower($email), 'display_name' => $displayName, 'password_hash' => password_hash($password, PASSWORD_DEFAULT), 'is_active' => true, 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')]);
         $projectModel = new ProjectModel();
-        $projectModel->insert(['code' => strtoupper($code), 'name' => $projectName, 'status' => 'active']);
+        $projectId = UuidModel::generateUuid();
+        $projectModel->insert(['id' => $projectId, 'code' => strtoupper($code), 'name' => $projectName, 'status' => 'active']);
         $role = $db->table('roles')->where('code', 'administrator')->get()->getRowArray();
-        $db->table('memberships')->insert(['project_id' => $projectModel->getInsertID(), 'user_id' => $userId, 'role_id' => $role['id'], 'created_at' => date('Y-m-d H:i:s')]);
+        $db->table('memberships')->insert(['project_id' => $projectId, 'user_id' => $userId, 'role_id' => $role['id'], 'created_at' => date('Y-m-d H:i:s')]);
         $db->transComplete();
         CLI::write('MOSAICO inicializado. Acesse /login com o e-mail informado.', 'green');
     }

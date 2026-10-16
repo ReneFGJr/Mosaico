@@ -62,10 +62,12 @@ final class Pieces extends BaseController
         $assets = $db->table('assets AS piece_assets')->select('piece_assets.*, COUNT(versions.version_number) AS version_count, MAX(versions.version_number) AS latest_version')->join('asset_versions AS versions', 'versions.asset_id = piece_assets.id', 'left')->where('piece_assets.piece_id', $id)->groupBy('piece_assets.id')->orderBy('piece_assets.created_at', 'DESC')->get()->getResultArray();
         $pieceCollection = $db->table('piece_collections')->select('collection_id')->where('piece_id', $id)->get()->getRowArray();
         $previewFile = $this->findPreviewFile($id);
-        $vocabularies = $db->table('vocabularies')->orderBy('name')->get()->getResultArray();
+        $projectId = (string) $piece['project_id'];
+        $vocabularies = $db->table('vocabularies')->where('project_id', $projectId)->orderBy('name')->get()->getResultArray();
         $terms = $db->table('terms AS keyword_terms')
             ->select('keyword_terms.id, keyword_terms.vocabulary_id, keyword_terms.label, vocabularies.name AS vocabulary_name')
             ->join('vocabularies', 'vocabularies.id = keyword_terms.vocabulary_id')
+            ->where('vocabularies.project_id', $projectId)
             ->where('keyword_terms.is_active', true)
             ->orderBy('vocabularies.name')
             ->orderBy('keyword_terms.label')
@@ -75,6 +77,7 @@ final class Pieces extends BaseController
 
         return view('pieces/show', [
             'title' => $piece['title'],
+            'contentClass' => 'content-wide',
             'piece' => $piece,
             'assets' => $assets,
             'backUrl' => $pieceCollection ? site_url('colecoes/' . $pieceCollection['collection_id']) : site_url('pecas'),
@@ -100,7 +103,17 @@ final class Pieces extends BaseController
         }
 
         $selectedIds = array_values(array_unique(array_filter((array) $this->request->getPost('term_ids'), static fn ($value): bool => is_string($value) && preg_match('/^[0-9a-f-]{36}$/i', $value) === 1)));
-        $validIds = $selectedIds === [] ? [] : array_column($db->table('terms')->select('id')->where('is_active', true)->whereIn('id', $selectedIds)->get()->getResultArray(), 'id');
+        $validIds = $selectedIds === [] ? [] : array_column(
+            $db->table('terms')
+                ->select('terms.id')
+                ->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')
+                ->where('vocabularies.project_id', $piece['project_id'])
+                ->where('terms.is_active', true)
+                ->whereIn('terms.id', $selectedIds)
+                ->get()
+                ->getResultArray(),
+            'id',
+        );
         $categoryName = trim((string) $this->request->getPost('new_category'));
         $keywordLabel = trim((string) $this->request->getPost('new_keyword'));
         if (mb_strlen($categoryName) > 190 || mb_strlen($keywordLabel) > 190) {
@@ -111,9 +124,9 @@ final class Pieces extends BaseController
         }
 
         $db->transStart();
-        $categoryId = $this->resolveCategory((string) $this->request->getPost('vocabulary_id'), $categoryName);
+        $categoryId = $this->resolveCategory((string) $this->request->getPost('vocabulary_id'), $categoryName, (string) $piece['project_id']);
         if ($keywordLabel !== '') {
-            $categoryId ??= $this->defaultKeywordCategory();
+            $categoryId ??= $this->defaultKeywordCategory((string) $piece['project_id']);
             $validIds[] = $this->resolveKeyword($categoryId, $keywordLabel);
         }
         $validIds = array_values(array_unique($validIds));
@@ -213,7 +226,7 @@ SVG;
         };
     }
 
-    private function resolveCategory(string $selectedId, string $newName): ?string
+    private function resolveCategory(string $selectedId, string $newName, string $projectId): ?string
     {
         $db = db_connect();
         if ($newName !== '') {
@@ -225,7 +238,7 @@ SVG;
             }
             $categoryId = UuidModel::generateUuid();
             $now = date('Y-m-d H:i:s');
-            $db->table('vocabularies')->insert(['id' => $categoryId, 'code' => $code, 'name' => $newName, 'description' => 'Categoria criada na edição de palavras-chave.', 'created_at' => $now, 'updated_at' => $now]);
+            $db->table('vocabularies')->insert(['id' => $categoryId, 'project_id' => $projectId, 'code' => $code, 'name' => $newName, 'description' => 'Categoria criada na edição de palavras-chave.', 'created_at' => $now, 'updated_at' => $now]);
 
             return $categoryId;
         }
@@ -233,7 +246,7 @@ SVG;
         if (preg_match('/^[0-9a-f-]{36}$/i', $selectedId) !== 1) {
             return null;
         }
-        $category = $db->table('vocabularies')->select('id')->where('id', $selectedId)->get()->getRowArray();
+        $category = $db->table('vocabularies')->select('id')->where('id', $selectedId)->where('project_id', $projectId)->get()->getRowArray();
 
         return $category['id'] ?? null;
     }
@@ -254,17 +267,23 @@ SVG;
         return $termId;
     }
 
-    private function defaultKeywordCategory(): string
+    private function defaultKeywordCategory(string $projectId): string
     {
         $db = db_connect();
-        $category = $db->table('vocabularies')->select('id')->where('code', 'keywords')->get()->getRowArray();
+        $category = $db->table('vocabularies')->select('id')->where('project_id', $projectId)->where('name', 'Palavras-chave')->get()->getRowArray();
         if ($category) {
             return (string) $category['id'];
         }
 
         $categoryId = UuidModel::generateUuid();
         $now = date('Y-m-d H:i:s');
-        $db->table('vocabularies')->insert(['id' => $categoryId, 'code' => 'keywords', 'name' => 'Palavras-chave', 'description' => 'Palavras-chave gerais.', 'created_at' => $now, 'updated_at' => $now]);
+        $baseCode = 'keywords-' . substr(str_replace('-', '', $projectId), 0, 8);
+        $code = $baseCode;
+        $suffix = 2;
+        while ($db->table('vocabularies')->where('code', $code)->countAllResults() > 0) {
+            $code = $baseCode . '-' . $suffix++;
+        }
+        $db->table('vocabularies')->insert(['id' => $categoryId, 'project_id' => $projectId, 'code' => $code, 'name' => 'Palavras-chave', 'description' => 'Palavras-chave da comunidade.', 'created_at' => $now, 'updated_at' => $now]);
 
         return $categoryId;
     }

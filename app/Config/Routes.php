@@ -15,6 +15,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes): void {
     $routes->match(['get', 'post'], 'comunidades/(:segment)/editar', 'Projects::edit/$1');
     $routes->get('comunidades/(:segment)', 'Projects::show/$1');
     $routes->match(['get', 'post'], 'comunidades/(:segment)/colecoes/nova', 'Collections::create/$1');
+    $routes->get('colecoes/(:segment)/imagem', 'Collections::coverImage/$1');
     $routes->post('colecoes/(:segment)/selecionar', 'Collections::select/$1');
     $routes->get('colecoes/(:segment)', 'Collections::show/$1');
     $routes->post('colecoes/(:segment)/arquivos', 'Collections::upload/$1');

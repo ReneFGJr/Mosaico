@@ -7,6 +7,8 @@ use App\Libraries\GoogleDriveImporter;
 use App\Models\CollectionModel;
 use App\Models\ProjectModel;
 use App\Models\UuidModel;
+use CodeIgniter\Database\RawSql;
+use CodeIgniter\HTTP\Exceptions\HTTPException;
 
 final class Collections extends BaseController
 {
@@ -29,6 +31,12 @@ final class Collections extends BaseController
         'application/csv',
     ];
     private const MAX_FILE_SIZE = 1073741824;
+    private const COVER_IMAGE_TYPES = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+    ];
 
     public function show(string $id): string
     {
@@ -60,7 +68,14 @@ final class Collections extends BaseController
         $selectedTermId = (string) $this->request->getGet('term');
         $selectedTerm = null;
         if ($selectedTermId !== '') {
-            $selectedTerm = $db->table('terms')->select('id, label')->where('id', $selectedTermId)->where('is_active', true)->get()->getRowArray();
+            $selectedTerm = $db->table('terms')
+                ->select('terms.id, terms.label')
+                ->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')
+                ->where('terms.id', $selectedTermId)
+                ->where('vocabularies.project_id', $collection['project_id'])
+                ->where('terms.is_active', true)
+                ->get()
+                ->getRowArray();
             if (! $selectedTerm) {
                 $selectedTermId = '';
             }
@@ -77,7 +92,11 @@ final class Collections extends BaseController
             $piecesBuilder
                 ->distinct()
                 ->join('piece_terms AS search_piece_terms', 'search_piece_terms.piece_id = pieces.id', 'left')
-                ->join('terms AS search_terms', 'search_terms.id = search_piece_terms.term_id AND search_terms.is_active = 1', 'left')
+                ->join(
+                    'terms AS search_terms',
+                    new RawSql('search_terms.id = search_piece_terms.term_id AND search_terms.is_active = 1 AND search_terms.vocabulary_id IN (SELECT scoped_vocabularies.id FROM vocabularies AS scoped_vocabularies WHERE scoped_vocabularies.project_id = ' . $db->escape($collection['project_id']) . ')'),
+                    'left',
+                )
                 ->groupStart()
                 ->like('pieces.title', $query)
                 ->orLike('pieces.code', $query)
@@ -94,6 +113,8 @@ final class Collections extends BaseController
             $keywordRows = $db->table('piece_terms')
                 ->select('piece_terms.piece_id, terms.id, terms.label')
                 ->join('terms', 'terms.id = piece_terms.term_id')
+                ->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')
+                ->where('vocabularies.project_id', $collection['project_id'])
                 ->where('terms.is_active', true)
                 ->whereIn('piece_terms.piece_id', array_column($pieces, 'id'))
                 ->orderBy('terms.label')
@@ -123,6 +144,7 @@ final class Collections extends BaseController
 
         return view('collections/show', [
             'title' => $collection['name'],
+            'contentClass' => 'content-wide',
             'collection' => $collection,
             'viewMode' => $viewMode,
             'query' => $query,
@@ -131,12 +153,42 @@ final class Collections extends BaseController
             'terms' => $db->table('terms')
                 ->select('terms.id, terms.label, vocabularies.name AS vocabulary_name')
                 ->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')
+                ->where('vocabularies.project_id', $collection['project_id'])
                 ->where('terms.is_active', true)
                 ->orderBy('vocabularies.name')
                 ->orderBy('terms.label')
                 ->get()
                 ->getResultArray(),
         ]);
+    }
+
+    public function coverImage(string $id)
+    {
+        $collection = db_connect()->table('collections')
+            ->select('cover_image')
+            ->where('id', $id)
+            ->get()
+            ->getRowArray();
+        if (! $collection || ! $collection['cover_image']) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $root = realpath(WRITEPATH . 'collection-covers');
+        $path = realpath(WRITEPATH . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, (string) $collection['cover_image']));
+        if ($root === false || $path === false || ! is_file($path) || ! str_starts_with($path, $root . DIRECTORY_SEPARATOR)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $mimeType = mime_content_type($path);
+        if (! is_string($mimeType) || ! in_array($mimeType, array_keys(self::COVER_IMAGE_TYPES), true)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        return $this->response
+            ->setHeader('Content-Type', $mimeType)
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setHeader('Cache-Control', 'private, max-age=86400')
+            ->setBody((string) file_get_contents($path));
     }
 
     public function removeDrafts(string $id)
@@ -238,16 +290,55 @@ final class Collections extends BaseController
         if ($this->request->getMethod() === 'POST') {
             $model = new CollectionModel();
             $collectionId = UuidModel::generateUuid();
+            $coverImage = $this->request->getFile('cover_image');
+            $coverImagePath = null;
+
+            if ($coverImage !== null && $coverImage->getError() !== UPLOAD_ERR_NO_FILE) {
+                if (! $coverImage->isValid()) {
+                    return redirect()->back()->withInput()->with('error', 'Não foi possível receber a imagem da coleção.');
+                }
+                if ($coverImage->getSize() > 5 * 1024 * 1024) {
+                    return redirect()->back()->withInput()->with('error', 'A imagem representativa deve ter no máximo 5 MB.');
+                }
+
+                $mimeType = $coverImage->getMimeType();
+                if (! isset(self::COVER_IMAGE_TYPES[$mimeType])) {
+                    return redirect()->back()->withInput()->with('error', 'Use uma imagem JPEG, PNG, WebP ou GIF.');
+                }
+
+                $relativeDirectory = 'collection-covers/' . $projectId;
+                $absoluteDirectory = WRITEPATH . str_replace('/', DIRECTORY_SEPARATOR, $relativeDirectory);
+                if (! is_dir($absoluteDirectory) && ! mkdir($absoluteDirectory, 0750, true) && ! is_dir($absoluteDirectory)) {
+                    log_message('error', 'Could not create collection cover image directory for community {projectId}.', ['projectId' => $projectId]);
+                    return redirect()->back()->withInput()->with('error', 'Não foi possível preparar o armazenamento da imagem.');
+                }
+
+                $coverImagePath = $relativeDirectory . '/' . $collectionId . '.' . self::COVER_IMAGE_TYPES[$mimeType];
+                try {
+                    $coverImage->move($absoluteDirectory, $collectionId . '.' . self::COVER_IMAGE_TYPES[$mimeType]);
+                } catch (HTTPException $exception) {
+                    log_message('error', 'Could not store collection cover image: {error}', ['error' => $exception->getMessage()]);
+                    return redirect()->back()->withInput()->with('error', 'Não foi possível armazenar a imagem representativa.');
+                }
+            }
+
             $data = [
                 'id' => $collectionId,
                 'project_id' => $projectId,
                 'code' => strtoupper($project['code']) . '-' . $collectionId,
                 'name' => trim((string) $this->request->getPost('name')),
                 'description' => trim((string) $this->request->getPost('description')),
+                'cover_image' => $coverImagePath,
             ];
             if ($model->insert($data)) {
                 (new AuditLogger())->record('collection.created', 'collection', $collectionId, ['project_id' => $projectId, 'code' => $data['code']]);
                 return redirect()->to('/comunidades/' . $projectId)->with('success', 'Coleção criada.');
+            }
+            if ($coverImagePath !== null) {
+                $storedImagePath = WRITEPATH . str_replace('/', DIRECTORY_SEPARATOR, $coverImagePath);
+                if (is_file($storedImagePath)) {
+                    unlink($storedImagePath);
+                }
             }
             return redirect()->back()->withInput()->with('errors', $model->errors());
         }
@@ -297,7 +388,11 @@ final class Collections extends BaseController
             return redirect()->back()->with('error', 'Selecione pelo menos um arquivo.');
         }
 
-        $termIds = $this->resolveTermIds((array) $this->request->getPost('term_ids'), (string) $this->request->getPost('new_keywords'));
+        $termIds = $this->resolveTermIds(
+            (array) $this->request->getPost('term_ids'),
+            (string) $this->request->getPost('new_keywords'),
+            (string) $collection['project_id'],
+        );
 
         $created = 0;
         $restored = 0;
@@ -593,22 +688,50 @@ final class Collections extends BaseController
             ->countAllResults() > 0;
     }
 
-    private function resolveTermIds(array $selectedIds, string $newKeywords): array
+    private function resolveTermIds(array $selectedIds, string $newKeywords, string $projectId): array
     {
         $db = db_connect();
         $selectedIds = array_values(array_unique(array_filter($selectedIds, static fn ($value): bool => is_string($value) && preg_match('/^[0-9a-f-]{36}$/i', $value) === 1)));
-        $validIds = $selectedIds === [] ? [] : array_column($db->table('terms')->select('id')->where('is_active', true)->whereIn('id', $selectedIds)->get()->getResultArray(), 'id');
+        $validIds = $selectedIds === [] ? [] : array_column(
+            $db->table('terms')
+                ->select('terms.id')
+                ->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')
+                ->where('vocabularies.project_id', $projectId)
+                ->where('terms.is_active', true)
+                ->whereIn('terms.id', $selectedIds)
+                ->get()
+                ->getResultArray(),
+            'id',
+        );
 
         $keywords = array_slice(array_values(array_unique(array_filter(array_map('trim', preg_split('/[,;\r\n]+/u', $newKeywords) ?: [])))), 0, 20);
         if ($keywords === []) {
             return $validIds;
         }
 
-        $vocabulary = $db->table('vocabularies')->where('code', 'keywords')->get()->getRowArray();
+        $vocabulary = $db->table('vocabularies')
+            ->where('project_id', $projectId)
+            ->where('name', 'Palavras-chave')
+            ->get()
+            ->getRowArray();
         if (! $vocabulary) {
             $vocabularyId = UuidModel::generateUuid();
             $now = date('Y-m-d H:i:s');
-            $db->table('vocabularies')->insert(['id' => $vocabularyId, 'code' => 'keywords', 'name' => 'Palavras-chave', 'description' => 'Palavras-chave criadas durante a ingestão de arquivos.', 'created_at' => $now, 'updated_at' => $now]);
+            $baseCode = 'keywords-' . substr(str_replace('-', '', $projectId), 0, 8);
+            $code = $baseCode;
+            $suffix = 2;
+            while ($db->table('vocabularies')->where('code', $code)->countAllResults() > 0) {
+                $code = $baseCode . '-' . $suffix++;
+            }
+            $db->table('vocabularies')->insert([
+                'id'          => $vocabularyId,
+                'project_id'  => $projectId,
+                'code'        => $code,
+                'name'        => 'Palavras-chave',
+                'description' => 'Palavras-chave criadas durante a ingestão de arquivos.',
+                'created_at'  => $now,
+                'updated_at'  => $now,
+            ]);
         } else {
             $vocabularyId = $vocabulary['id'];
         }

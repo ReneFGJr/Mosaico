@@ -4,15 +4,23 @@ namespace App\Controllers;
 
 use App\Libraries\AuditLogger;
 use App\Models\ProjectModel;
+use App\Models\UuidModel;
 
 final class Projects extends BaseController
 {
     public function index(): string
     {
+        $projects = (new ProjectModel())->where('status !=', 'excluded')->orderBy('name')->findAll();
+        $selectedCommunityId = (string) $this->request->getCookie('mosaico_selected_community');
+        if (! in_array($selectedCommunityId, array_column($projects, 'id'), true)) {
+            $selectedCommunityId = '';
+        }
+
         return view('projects/index', [
             'title' => 'Comunidades',
-            'projects' => (new ProjectModel())->where('status !=', 'excluded')->orderBy('name')->findAll(),
-            'selectedCommunityId' => (string) $this->request->getCookie('mosaico_selected_community'),
+            'contentClass' => 'content-wide',
+            'projects' => $projects,
+            'selectedCommunityId' => $selectedCommunityId,
         ]);
     }
 
@@ -20,9 +28,9 @@ final class Projects extends BaseController
     {
         if ($this->request->getMethod() === 'POST') {
             $model = new ProjectModel();
-            $data = ['code' => strtoupper(trim((string) $this->request->getPost('code'))), 'name' => trim((string) $this->request->getPost('name')), 'description' => trim((string) $this->request->getPost('description')), 'status' => 'active'];
+            $id = UuidModel::generateUuid();
+            $data = ['id' => $id, 'code' => strtoupper(trim((string) $this->request->getPost('code'))), 'name' => trim((string) $this->request->getPost('name')), 'description' => trim((string) $this->request->getPost('description')), 'status' => 'active'];
             if ($model->insert($data)) {
-                $id = (string) $model->getInsertID();
                 $role = db_connect()->table('roles')->where('code', 'administrator')->get()->getRowArray();
                 if ($role) {
                     db_connect()->table('memberships')->insert(['project_id' => $id, 'user_id' => session('user_id'), 'role_id' => $role['id'], 'created_at' => date('Y-m-d H:i:s')]);
@@ -43,6 +51,7 @@ final class Projects extends BaseController
         }
         return view('projects/show', [
             'title' => $project['name'],
+            'contentClass' => 'content-wide',
             'project' => $project,
             'collections' => db_connect()->table('collections')->where('project_id', $id)->orderBy('name')->get()->getResultArray(),
             'selectedCollectionId' => (string) $this->request->getCookie('mosaico_selected_collection'),

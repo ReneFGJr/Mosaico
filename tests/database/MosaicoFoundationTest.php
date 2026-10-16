@@ -103,7 +103,7 @@ final class MosaicoFoundationTest extends CIUnitTestCase
         $piece = $pieceModel->first();
 
         $vocabularyModel = new VocabularyModel();
-        $vocabularyModel->insert(['code' => 'assunto', 'name' => 'Assunto']);
+        $vocabularyModel->insert(['project_id' => $project['id'], 'code' => 'assunto', 'name' => 'Assunto']);
         $vocabulary = $vocabularyModel->first();
 
         $termModel = new TermModel();

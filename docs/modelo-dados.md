@@ -20,10 +20,10 @@ O nome `projects` é mantido internamente por compatibilidade, mas representa a 
 | `roles`, `permissions`, `role_permissions` | Catálogo inicial de perfis e permissões; concessões via associação muitos-para-muitos. |
 | `projects` | Armazenamento legado das comunidades; código único, nome, descrição e situação. |
 | `memberships` | Usuário, perfil e comunidade; a autorização consulta sempre a comunidade e nega por padrão. |
-| `collections` | Coleção com código único dentro da comunidade. |
+| `collections` | Coleção com código único dentro da comunidade e imagem representativa opcional armazenada fora da raiz pública. |
 | `pieces` | Identidade estável, código único por comunidade, metadados iniciais, estado editorial e visibilidade independentes. |
 | `piece_collections` | Associação N:N de peças e coleções. |
-| `vocabularies`, `terms` | Vocabulários e termos com identificadores estáveis, hierarquia e substituição sem apagar termos desativados. |
+| `vocabularies`, `terms` | Vocabulários pertencem a uma comunidade (`project_id`); os termos mantêm identificadores estáveis, hierarquia e substituição sem apagar termos desativados. Categorias e palavras-chave não são compartilhadas entre comunidades. |
 | `piece_terms` | Classificação N:N de peças com termos controlados. |
 
 ## Modelo previsto para as próximas etapas

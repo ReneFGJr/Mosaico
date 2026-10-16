@@ -12,6 +12,6 @@ final class Dashboard extends BaseController
             $counts[$table] = $db->table($table)->countAllResults();
         }
         $recent = $db->table('pieces')->select('pieces.*, projects.name AS project_name')->join('projects', 'projects.id = pieces.project_id')->orderBy('pieces.created_at', 'DESC')->limit(5)->get()->getResultArray();
-        return view('dashboard/index', ['title' => 'Painel', 'counts' => $counts, 'recent' => $recent]);
+        return view('dashboard/index', ['title' => 'Painel', 'contentClass' => 'content-wide', 'counts' => $counts, 'recent' => $recent]);
     }
 }

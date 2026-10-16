@@ -106,11 +106,14 @@ final class MosaicoWebTest extends CIUnitTestCase
             ->get('/painel');
         $response->assertStatus(200);
         $response->assertSee('Painel do repositório');
+        $response->assertSee('content-wide');
+        $response->assertSee('aria-label="Criar comunidade"');
+        $response->assertSee('/comunidades/nova');
         $response->assertSee('Status:');
         $response->assertSee('Sistema disponível.');
         $response->assertSee('class="nav-disabled"');
         $response->assertSee('aria-disabled="true"');
-        $response->assertSee('Selecione uma comunidade para acessá-la');
+        $response->assertSee('Comunidade (0)');
         $response->assertSee('Selecione uma coleção para acessá-la');
     }
 
@@ -123,6 +126,7 @@ final class MosaicoWebTest extends CIUnitTestCase
         $this->assertContains('original_directory', $pieceFields);
         $this->assertContains('original_filename', $pieceFields);
         $this->assertContains('access_condition', $pieceFields);
+        $this->assertContains('cover_image', db_connect()->getFieldNames('collections'));
     }
 
     public function testCommunityListOffersCommunitySelection(): void
@@ -137,12 +141,129 @@ final class MosaicoWebTest extends CIUnitTestCase
         ])->get('/comunidades');
 
         $response->assertStatus(200);
+        $response->assertSee('community-grid');
         $response->assertSee('Selecionar Comunidade');
         $response->assertSee('Editar dados');
         $response->assertSee('Permissões');
         $response->assertSee('Visibilidade');
         $response->assertSee('Excluir');
         $response->assertSee('/comunidades/' . $community['id'] . '/selecionar');
+        $response->assertSee('>Comunidade (1)</a>');
+        $response->assertDontSee('Nenhuma comunidade cadastrada');
+        $response->assertSee('Nova coleção');
+        $response->assertSee('title="Selecione uma comunidade para criar uma coleção."');
+
+        $selectedResponse = $this->withHeaders(['Cookie' => 'mosaico_selected_community=' . $community['id']])
+            ->withSession([
+                'user_id' => '00000000-0000-4000-8000-000000000001',
+                'user_name' => 'Pessoa teste',
+            ])->get('/comunidades');
+        $selectedResponse->assertSee('/comunidades/' . $community['id'] . '/colecoes/nova');
+            $selectedResponse->assertDontSee('title="Selecione uma comunidade para criar uma coleção."');
+    }
+
+    public function testNewCollectionFormAcceptsARepresentativeImage(): void
+    {
+        $model = new ProjectModel();
+        $model->insert(['code' => 'COM-IMG', 'name' => 'Comunidade com imagem']);
+        $community = $model->first();
+
+        $response = $this->withSession([
+            'user_id' => '00000000-0000-4000-8000-000000000001',
+            'user_name' => 'Pessoa teste',
+        ])->get('/comunidades/' . $community['id'] . '/colecoes/nova');
+
+        $response->assertStatus(200);
+        $response->assertSee('enctype="multipart/form-data"');
+        $response->assertSee('name="cover_image"');
+        $response->assertSee('accept="image/jpeg,image/png,image/webp,image/gif"');
+    }
+
+    public function testAuthenticatedUserCanCreateCommunityAndBeAssignedAsAdministrator(): void
+    {
+        $csrfToken = csrf_hash();
+        $response = $this->withHeaders(['Cookie' => 'csrf_cookie_name=' . $csrfToken])
+            ->withSession([
+                'user_id' => '00000000-0000-4000-8000-000000000001',
+                'user_name' => 'Pessoa teste',
+            ])->post('/comunidades/nova', [
+            'csrf_test_name' => $csrfToken,
+            'code' => 'COM-NOVA',
+            'name' => 'Comunidade nova',
+            'description' => 'Descrição de teste',
+        ]);
+
+        $community = db_connect()->table('projects')->where('code', 'COM-NOVA')->get()->getRowArray();
+        $administrator = db_connect()->table('roles')->where('code', 'administrator')->get()->getRowArray();
+
+        $this->assertNotNull($community);
+        $this->assertNotNull($administrator);
+        $this->assertMatchesRegularExpression('/^[0-9a-f-]{36}$/i', $community['id']);
+        $response->assertRedirectTo('/comunidades/' . $community['id']);
+        $this->assertSame(1, db_connect()->table('memberships')->where([
+            'project_id' => $community['id'],
+            'user_id' => '00000000-0000-4000-8000-000000000001',
+            'role_id' => $administrator['id'],
+        ])->countAllResults());
+    }
+
+    public function testKeywordsCannotBeSharedAcrossCommunities(): void
+    {
+        $projectModel = new ProjectModel();
+        $projectModel->insert(['code' => 'COM-KEY-1', 'name' => 'Comunidade de palavras 1']);
+        $firstCommunity = $projectModel->first();
+        $projectModel->insert(['code' => 'COM-KEY-2', 'name' => 'Comunidade de palavras 2']);
+        $secondCommunity = $projectModel->where('code', 'COM-KEY-2')->first();
+
+        $pieceModel = new PieceModel();
+        $pieceModel->insert(['project_id' => $firstCommunity['id'], 'code' => 'KEY-1', 'title' => 'Peça da primeira comunidade', 'type' => 'video']);
+        $firstPiece = $pieceModel->first();
+        $pieceModel->insert(['project_id' => $secondCommunity['id'], 'code' => 'KEY-2', 'title' => 'Peça da segunda comunidade', 'type' => 'video']);
+        $secondPiece = $pieceModel->where('code', 'KEY-2')->first();
+
+        $administrator = db_connect()->table('roles')->where('code', 'administrator')->get()->getRowArray();
+        foreach ([$firstCommunity, $secondCommunity] as $community) {
+            db_connect()->table('memberships')->insert([
+                'project_id' => $community['id'],
+                'user_id' => '00000000-0000-4000-8000-000000000001',
+                'role_id' => $administrator['id'],
+            ]);
+        }
+
+        $csrfToken = csrf_hash();
+        $this->withHeaders(['Cookie' => 'csrf_cookie_name=' . $csrfToken])
+            ->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
+            ->post('/pecas/' . $firstPiece['id'] . '/palavras-chave', [
+                'csrf_test_name' => $csrfToken,
+                'new_category' => 'Categoria exclusiva',
+                'new_keyword' => 'Palavra exclusiva',
+            ])->assertRedirectTo('/pecas/' . $firstPiece['id']);
+
+        $term = db_connect()->table('terms')
+            ->select('terms.id')
+            ->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')
+            ->where('vocabularies.project_id', $firstCommunity['id'])
+            ->where('terms.label', 'Palavra exclusiva')
+            ->get()
+            ->getRowArray();
+        $this->assertNotNull($term);
+
+        $csrfToken = csrf_hash();
+        $this->withHeaders(['Cookie' => 'csrf_cookie_name=' . $csrfToken])
+            ->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
+            ->post('/pecas/' . $secondPiece['id'] . '/palavras-chave', [
+                'csrf_test_name' => $csrfToken,
+                'term_ids' => [$term['id']],
+            ])->assertRedirectTo('/pecas/' . $secondPiece['id']);
+
+        $this->assertSame(0, db_connect()->table('piece_terms')
+            ->where('piece_id', $secondPiece['id'])
+            ->where('term_id', $term['id'])
+            ->countAllResults());
+
+        $response = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
+            ->get('/pecas/' . $secondPiece['id']);
+        $response->assertDontSee('Palavra exclusiva');
     }
 
     public function testCommunityDetailsOffersManagementActions(): void
@@ -155,7 +276,9 @@ final class MosaicoWebTest extends CIUnitTestCase
             'project_id' => $community['id'],
             'code' => 'COM-2-CODIGO-INTERNO',
             'name' => 'Coleção em destaque',
+            'cover_image' => 'collection-covers/' . $community['id'] . '/capa.png',
         ]);
+        $collection = $collectionModel->first();
         $model->insert(['code' => 'COM-2B', 'name' => 'Outra comunidade disponível']);
         $otherCommunity = $model->where('code', 'COM-2B')->first();
 
@@ -165,12 +288,14 @@ final class MosaicoWebTest extends CIUnitTestCase
         ])->get('/comunidades/' . $community['id']);
 
         $response->assertStatus(200);
+        $response->assertSee('content-wide');
         $response->assertSee('Editar dados');
         $response->assertSee('Visibilidade');
         $response->assertSee('Excluir');
         $response->assertSee('/comunidades/' . $community['id'] . '/editar');
         $response->assertSee('Coleções');
         $response->assertSee('Coleção em destaque');
+        $response->assertSee('/colecoes/' . $collection['id'] . '/imagem');
         $response->assertSee('Selecionar Coleção');
         $response->assertDontSee('Outra comunidade disponível');
         $response->assertDontSee('COM-2-CODIGO-INTERNO');
@@ -193,7 +318,7 @@ final class MosaicoWebTest extends CIUnitTestCase
         db_connect()->table('piece_collections')->insert(['piece_id' => $linkedPiece['id'], 'collection_id' => $collection['id']]);
         db_connect()->table('piece_collections')->insert(['piece_id' => $pieceWithoutTerm['id'], 'collection_id' => $collection['id']]);
         $vocabularyModel = new VocabularyModel();
-        $vocabularyModel->insert(['code' => 'tags-teste', 'name' => 'Tags de teste']);
+        $vocabularyModel->insert(['project_id' => $community['id'], 'code' => 'tags-teste', 'name' => 'Tags de teste']);
         $vocabulary = $vocabularyModel->first();
         $termModel = new TermModel();
         $termModel->insert(['vocabulary_id' => $vocabulary['id'], 'code' => 'saude-digital', 'label' => 'Saúde digital']);
@@ -208,6 +333,7 @@ final class MosaicoWebTest extends CIUnitTestCase
         $collectionResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
             ->get('/colecoes/' . $collection['id']);
         $collectionResponse->assertStatus(200);
+        $collectionResponse->assertSee('content-wide');
         $collectionResponse->assertSee('Coleção filtrada');
         $collectionResponse->assertSee('Comunidade filtrada');
         $collectionResponse->assertSee('Peça vinculada');
@@ -320,6 +446,7 @@ final class MosaicoWebTest extends CIUnitTestCase
         $pieceResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
             ->get('/pecas/' . $linkedPiece['id']);
         $pieceResponse->assertStatus(200);
+        $pieceResponse->assertSee('content-wide');
         $pieceResponse->assertSee('Pré-visualização');
         $pieceResponse->assertSee('<video controls preload="metadata">');
         $pieceResponse->assertSee('/pecas/' . $linkedPiece['id'] . '/preview');

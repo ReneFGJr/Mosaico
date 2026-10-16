@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^php -v; php spark routes$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

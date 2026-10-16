@@ -1,0 +1,36 @@
+.content-wide {
+    max-width: none;
+}
+
+.community-stat {
+    position: relative;
+}
+
+.add-community {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 1px solid var(--primary);
+    border-radius: 50%;
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.add-community svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 2;
+}
+
+.add-community:hover,
+.add-community:focus {
+    background: var(--primary);
+    color: #fff;
+}
