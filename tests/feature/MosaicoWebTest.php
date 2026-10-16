@@ -282,16 +282,22 @@ final class MosaicoWebTest extends CIUnitTestCase
         $model->insert(['code' => 'COM-2B', 'name' => 'Outra comunidade disponível']);
         $otherCommunity = $model->where('code', 'COM-2B')->first();
 
-        $response = $this->withSession([
-            'user_id' => '00000000-0000-4000-8000-000000000001',
-            'user_name' => 'Pessoa teste',
-        ])->get('/comunidades/' . $community['id']);
+        $response = $this->withHeaders(['Cookie' => 'mosaico_selected_community=' . $community['id'] . '; mosaico_selected_collection=' . $collection['id']])
+            ->withSession([
+                'user_id' => '00000000-0000-4000-8000-000000000001',
+                'user_name' => 'Pessoa teste',
+            ])->get('/comunidades/' . $community['id']);
 
         $response->assertStatus(200);
         $response->assertSee('content-wide');
         $response->assertSee('Editar dados');
         $response->assertSee('Visibilidade');
         $response->assertSee('Excluir');
+        $response->assertSee('Coleções <span class="nav-count">(1)</span>');
+        $response->assertSee('<span class="nav-context">');
+        $response->assertSee('href="/comunidades/' . $community['id'] . '"');
+        $response->assertSee('class="nav-context">Comunidade gerenciável</span>');
+        $response->assertSee('class="nav-context">Coleção em destaque</span>');
         $response->assertSee('/comunidades/' . $community['id'] . '/editar');
         $response->assertSee('Coleções');
         $response->assertSee('Coleção em destaque');

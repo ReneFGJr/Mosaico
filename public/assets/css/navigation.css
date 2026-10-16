@@ -1,3 +1,28 @@
+.sidebar .nav-context-item {
+    display: block;
+}
+
+.sidebar .nav-count {
+    display: inline-block;
+    padding: .05rem .35rem;
+    border-radius: 999px;
+    background: #777670;
+    color: #fff;
+    font-size: .75em;
+    line-height: 1.4;
+    vertical-align: .08em;
+}
+
+.sidebar .nav-context {
+    display: block;
+    margin-top: .2rem;
+    color: #777670;
+    font-size: .85em;
+    font-style: italic;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+}
+
 .sidebar .nav-disabled {
     display: block;
     padding: .75rem;

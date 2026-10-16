@@ -24,8 +24,13 @@
 </header>
 <?php if (session('user_id')): ?>
 <aside class="sidebar" aria-label="Navegação principal">
+    <?php $selectedCommunityCookie = (string) service('request')->getCookie('mosaico_selected_community'); ?>
     <?php $selectedCollectionCookie = (string) service('request')->getCookie('mosaico_selected_collection'); ?>
     <?php $communityCount = db_connect()->table('projects')->where('status !=', 'excluded')->countAllResults(); ?>
+    <?php $db = db_connect(); ?>
+    <?php $selectedCommunity = $selectedCommunityCookie !== '' ? $db->table('projects')->select('id, name')->where('id', $selectedCommunityCookie)->where('status !=', 'excluded')->get()->getRowArray() : null; ?>
+    <?php $collectionCount = $selectedCommunity ? $db->table('collections')->where('project_id', $selectedCommunity['id'])->countAllResults() : 0; ?>
+    <?php $selectedCollection = $selectedCollectionCookie !== '' && $selectedCommunity ? $db->table('collections')->select('id, name')->where('id', $selectedCollectionCookie)->where('project_id', $selectedCommunity['id'])->get()->getRowArray() : null; ?>
     <nav>
         <a href="<?= site_url('painel') ?>">Visão geral</a>
         <?php if ($communityCount > 0): ?>
@@ -33,11 +38,14 @@
         <?php else: ?>
             <span class="nav-disabled" aria-disabled="true" title="Nenhuma comunidade cadastrada">Comunidade (0)</span>
         <?php endif ?>
-        <?php if ($selectedCollectionCookie !== ''): ?>
-            <a href="<?= site_url('colecoes/'.$selectedCollectionCookie) ?>">Coleção</a>
-            <a href="<?= site_url('colecoes/'.$selectedCollectionCookie) ?>">Peças</a>
+        <?php if ($selectedCommunity): ?>
+            <a class="nav-context-item" href="<?= site_url('comunidades/'.$selectedCommunity['id']) ?>">Coleções <span class="nav-count">(<?= esc($collectionCount) ?>)</span><span class="nav-context"><?= esc($selectedCommunity['name']) ?></span></a>
         <?php else: ?>
-            <span class="nav-disabled" aria-disabled="true" title="Selecione uma coleção para acessá-la">Coleção</span>
+            <span class="nav-disabled" aria-disabled="true" title="Selecione uma comunidade para acessar as coleções">Coleções</span>
+        <?php endif ?>
+        <?php if ($selectedCollection): ?>
+            <a class="nav-context-item" href="<?= site_url('colecoes/'.$selectedCollection['id']) ?>">Peças<span class="nav-context"><?= esc($selectedCollection['name']) ?></span></a>
+        <?php else: ?>
             <span class="nav-disabled" aria-disabled="true" title="Selecione uma coleção para acessar as peças">Peças</span>
         <?php endif ?>
     </nav>
