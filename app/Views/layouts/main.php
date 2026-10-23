@@ -19,7 +19,17 @@
 <header class="navbar">
     <a class="brand" href="<?= site_url('painel') ?>" aria-label="MOSAICO — Repositório de Ativos Digitais"><img src="<?= base_url('assets/logo/logo_mosaico.png') ?>" alt="MOSAICO repository"></a>
     <?php if (session('user_id')): ?>
-        <div class="user"><span><?= esc(session('user_name')) ?></span><form method="post" action="<?= site_url('logout') ?>"><?= csrf_field() ?><button class="link-button" type="submit">Sair</button></form></div>
+        <?php $firstName = (preg_split('/\s+/u', trim((string) session('user_name'))) ?: [])[0] ?? ''; ?>
+        <details class="user user-dropdown">
+            <summary><?= esc($firstName !== '' ? $firstName : 'Usuário') ?></summary>
+            <div class="user-dropdown-panel">
+                <a href="<?= site_url('profile') ?>">Perfil</a>
+                <form method="post" action="<?= site_url('logout') ?>">
+                    <?= csrf_field() ?>
+                    <button type="submit">Sair</button>
+                </form>
+            </div>
+        </details>
     <?php endif ?>
 </header>
 <?php if (session('user_id')): ?>
@@ -29,8 +39,8 @@
     <?php $communityCount = db_connect()->table('projects')->where('status !=', 'excluded')->countAllResults(); ?>
     <?php $db = db_connect(); ?>
     <?php $selectedCommunity = $selectedCommunityCookie !== '' ? $db->table('projects')->select('id, name')->where('id', $selectedCommunityCookie)->where('status !=', 'excluded')->get()->getRowArray() : null; ?>
-    <?php $collectionCount = $selectedCommunity ? $db->table('collections')->where('project_id', $selectedCommunity['id'])->countAllResults() : 0; ?>
-    <?php $selectedCollection = $selectedCollectionCookie !== '' && $selectedCommunity ? $db->table('collections')->select('id, name')->where('id', $selectedCollectionCookie)->where('project_id', $selectedCommunity['id'])->get()->getRowArray() : null; ?>
+    <?php $collectionCount = $selectedCommunity ? $db->table('collections')->where('deleted_at', null)->where('project_id', $selectedCommunity['id'])->countAllResults() : 0; ?>
+    <?php $selectedCollection = $selectedCollectionCookie !== '' && $selectedCommunity ? $db->table('collections')->where('deleted_at', null)->select('id, name')->where('id', $selectedCollectionCookie)->where('project_id', $selectedCommunity['id'])->get()->getRowArray() : null; ?>
     <nav>
         <a href="<?= site_url('painel') ?>">Visão geral</a>
         <?php if ($communityCount > 0): ?>
@@ -58,7 +68,9 @@
     <span class="footer-signature">MOSAICO — preservação, acesso e rastreabilidade.</span>
     <div class="system-status" aria-live="polite" aria-atomic="true">
         <strong>Status:</strong>
-        <?php if (session('success')): ?>
+        <?php if (session('warning')): ?>
+            <span class="status-message status-warning" role="alert" tabindex="-1" data-status-warning><?= esc(session('warning')) ?></span>
+        <?php elseif (session('success')): ?>
             <span class="status-message status-success" role="status"><?= esc(session('success')) ?></span>
         <?php elseif (session('error')): ?>
             <span class="status-message status-error" role="alert"><?= esc(session('error')) ?></span>
@@ -70,5 +82,6 @@
     </div>
 </footer>
 <script src="<?= base_url('assets/js/collections.js') ?>" defer></script>
+<script src="<?= base_url('assets/js/user-menu.js') ?>" defer></script>
 </body>
 </html>

@@ -41,6 +41,17 @@ body {
     color: var(--error);
 }
 
+.status-warning {
+    color: #663c00;
+    background: #fff3cd;
+    border-left: 4px solid #b78103;
+    border-radius: 4px;
+    padding: .5rem .75rem;
+    overflow-wrap: anywhere;
+}
+
+.status-warning:focus { outline: 3px solid #f0b429; outline-offset: 2px; }
+
 .status-idle {
     color: var(--muted);
     font-weight: 400;

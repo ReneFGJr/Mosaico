@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\AuditLogger;
 use App\Libraries\GoogleDriveImporter;
+use App\Libraries\ProjectAccess;
 use App\Models\CollectionModel;
 use App\Models\ProjectModel;
 use App\Models\UuidModel;
@@ -41,7 +42,7 @@ final class Collections extends BaseController
     public function show(string $id): string
     {
         $db = db_connect();
-        $collection = $db->table('collections')
+        $collection = $db->table('collections')->where('collections.deleted_at', null)
             ->select('collections.*, projects.name AS community_name, projects.id AS community_id')
             ->join('projects', 'projects.id = collections.project_id')
             ->where('collections.id', $id)
@@ -164,7 +165,7 @@ final class Collections extends BaseController
 
     public function coverImage(string $id)
     {
-        $collection = db_connect()->table('collections')
+        $collection = db_connect()->table('collections')->where('collections.deleted_at', null)
             ->select('cover_image')
             ->where('id', $id)
             ->get()
@@ -194,7 +195,7 @@ final class Collections extends BaseController
     public function removeDrafts(string $id)
     {
         $db = db_connect();
-        $collection = $db->table('collections')->where('id', $id)->get()->getRowArray();
+        $collection = $db->table('collections')->where('collections.deleted_at', null)->where('id', $id)->get()->getRowArray();
         if (! $collection) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
@@ -228,7 +229,7 @@ final class Collections extends BaseController
     public function bulkAction(string $id)
     {
         $db = db_connect();
-        $collection = $db->table('collections')->where('id', $id)->get()->getRowArray();
+        $collection = $db->table('collections')->where('collections.deleted_at', null)->where('id', $id)->get()->getRowArray();
         if (! $collection) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
@@ -345,9 +346,98 @@ final class Collections extends BaseController
         return view('collections/form', ['title' => 'Nova coleção', 'project' => $project]);
     }
 
+    private function manageableCollection(string $id): ?array
+    {
+        $collection = db_connect()->table('collections')->where('collections.deleted_at', null)->select('collections.*, projects.name AS community_name')
+            ->join('projects', 'projects.id = collections.project_id')->where('collections.id', $id)
+            ->where('projects.status !=', 'excluded')->get()->getRowArray();
+        if (! $collection) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+        return (new ProjectAccess())->allows((string) session('user_id'), $collection['project_id'], 'projects.manage') ? $collection : null;
+    }
+
+    public function edit(string $id)
+    {
+        $collection = $this->manageableCollection($id);
+        if (! $collection) {
+            return redirect()->to('/comunidades')->with('error', 'Você não tem permissão para editar esta coleção.');
+        }
+        if ($this->request->getMethod() === 'POST') {
+            $data = ['name' => trim((string) $this->request->getPost('name')), 'description' => trim((string) $this->request->getPost('description'))];
+            if ($data['name'] === '' || mb_strlen($data['name']) > 190) {
+                return redirect()->to('/colecoes/' . $id . '/editar')->withInput()->with('error', 'Informe um nome de até 190 caracteres.');
+            }
+            $db = db_connect();
+            $db->transStart();
+            $db->table('collections')->where('collections.deleted_at', null)->where('id', $id)->update($data + ['updated_at' => date('Y-m-d H:i:s')]);
+            (new AuditLogger())->record('collection.updated', 'collection', $id);
+            $db->transComplete();
+            return redirect()->to('/comunidades/' . $collection['project_id'])->with($db->transStatus() ? 'success' : 'error', $db->transStatus() ? 'Coleção atualizada.' : 'Não foi possível atualizar a coleção.');
+        }
+        return view('collections/manage', ['title' => 'Editar coleção', 'collection' => $collection, 'mode' => 'edit']);
+    }
+
+    public function changeImage(string $id)
+    {
+        $collection = $this->manageableCollection($id);
+        if (! $collection) {
+            return redirect()->to('/comunidades')->with('error', 'Você não tem permissão para trocar a imagem desta coleção.');
+        }
+        if ($this->request->getMethod() === 'POST') {
+            $image = $this->request->getFile('cover_image');
+            if (! $image || ! $image->isValid() || $image->getSize() > 5 * 1024 * 1024) {
+                return redirect()->to('/colecoes/' . $id . '/trocar-imagem')->with('error', 'Selecione uma imagem válida de até 5 MB.');
+            }
+            $mime = $image->getMimeType();
+            $dimensions = @getimagesize($image->getTempName());
+            if (! isset(self::COVER_IMAGE_TYPES[$mime]) || ! $dimensions || ($dimensions['mime'] ?? '') !== $mime || $dimensions[0] * $dimensions[1] > 40000000) {
+                return redirect()->to('/colecoes/' . $id . '/trocar-imagem')->with('error', 'Use uma imagem JPEG, PNG, WebP ou GIF de até 40 megapixels.');
+            }
+            $directory = 'collection-covers/' . $collection['project_id'];
+            $filename = $id . '-' . UuidModel::generateUuid() . '.' . self::COVER_IMAGE_TYPES[$mime];
+            try {
+                $image->move(WRITEPATH . $directory, $filename);
+            } catch (HTTPException $exception) {
+                return redirect()->to('/colecoes/' . $id . '/trocar-imagem')->with('error', 'Não foi possível armazenar a imagem. Tente novamente.');
+            }
+            $db = db_connect();
+            $db->transStart();
+            $db->table('collections')->where('collections.deleted_at', null)->where('id', $id)->update(['cover_image' => $directory . '/' . $filename, 'updated_at' => date('Y-m-d H:i:s')]);
+            (new AuditLogger())->record('collection.image_updated', 'collection', $id);
+            $db->transComplete();
+            return redirect()->to('/comunidades/' . $collection['project_id'])->with($db->transStatus() ? 'success' : 'error', $db->transStatus() ? 'Imagem da coleção atualizada.' : 'Não foi possível atualizar a imagem da coleção.');
+        }
+        return view('collections/manage', ['title' => 'Trocar imagem', 'collection' => $collection, 'mode' => 'image']);
+    }
+
+    public function delete(string $id)
+    {
+        $collection = $this->manageableCollection($id);
+        if (! $collection) {
+            return redirect()->to('/comunidades')->with('error', 'Você não tem permissão para deletar esta coleção.');
+        }
+        if ($this->request->getMethod() === 'POST') {
+            if ($this->request->getPost('confirmed') !== '1') {
+                return redirect()->to('/colecoes/' . $id . '/deletar')->with('error', 'Confirme a exclusão da coleção.');
+            }
+            $db = db_connect();
+            $db->transStart();
+            (new CollectionModel())->delete($id);
+            (new AuditLogger())->record('collection.hidden', 'collection', $id, ['project_id' => $collection['project_id']]);
+            $db->transComplete();
+            $response = redirect()->to('/comunidades/' . $collection['project_id']);
+            if ($db->transStatus() && $this->request->getCookie('mosaico_selected_collection') === $id) {
+                $response->deleteCookie('mosaico_selected_collection');
+            }
+            return $response->with($db->transStatus() ? 'success' : 'error', $db->transStatus() ? 'Coleção ocultada. Os dados e arquivos foram preservados.' : 'Não foi possível ocultar a coleção.');
+        }
+        return view('collections/manage', ['title' => 'Deletar coleção', 'collection' => $collection, 'mode' => 'delete']);
+    }
+
     public function select(string $id)
     {
-        $collection = db_connect()->table('collections')
+        $collection = db_connect()->table('collections')->where('collections.deleted_at', null)
             ->select('collections.*, projects.status AS community_status')
             ->join('projects', 'projects.id = collections.project_id')
             ->where('collections.id', $id)
@@ -369,7 +459,7 @@ final class Collections extends BaseController
     public function upload(string $id)
     {
         $db = db_connect();
-        $collection = $db->table('collections')
+        $collection = $db->table('collections')->where('collections.deleted_at', null)
             ->select('collections.*, projects.status AS community_status')
             ->join('projects', 'projects.id = collections.project_id')
             ->where('collections.id', $id)
@@ -396,6 +486,7 @@ final class Collections extends BaseController
 
         $created = 0;
         $restored = 0;
+        $restoredFiles = [];
         $errors = [];
         foreach ($files as $file) {
             $originalName = basename($file->getClientName());
@@ -428,7 +519,7 @@ final class Collections extends BaseController
                 continue;
             }
             $existingFile = $db->table('repository_files')
-                ->select('repository_files.id AS file_id, assets.piece_id, pieces.project_id')
+                ->select('repository_files.id AS file_id, repository_files.original_name, assets.piece_id, pieces.project_id')
                 ->join('asset_versions', 'asset_versions.id = repository_files.version_id')
                 ->join('assets', 'assets.id = asset_versions.asset_id')
                 ->join('pieces', 'pieces.id = assets.piece_id')
@@ -446,7 +537,8 @@ final class Collections extends BaseController
                     $db->table('piece_collections')->insert(['piece_id' => $existingFile['piece_id'], 'collection_id' => $id]);
                 }
                 $this->attachTerms((string) $existingFile['piece_id'], $termIds);
-                (new AuditLogger())->record('collection.file_restored', 'collection', $id, ['file_id' => $existingFile['file_id'], 'piece_id' => $existingFile['piece_id'], 'sha256' => $checksum]);
+                (new AuditLogger())->record('collection.file_restored', 'collection', $id, ['file_id' => $existingFile['file_id'], 'piece_id' => $existingFile['piece_id'], 'sha256' => $checksum, 'submitted_name' => $originalName]);
+                $restoredFiles[] = $originalName . ': conteúdo idêntico ao arquivo ' . $existingFile['original_name'] . '. A peça existente foi restaurada para Draft e está disponível nesta coleção.';
                 $restored++;
                 continue;
             }
@@ -500,14 +592,14 @@ final class Collections extends BaseController
         if ($created === 0 && $restored === 0) {
             return redirect()->back()->with('errors', $errors ?: ['Nenhum arquivo foi processado.']);
         }
-        $message = $created . ($created === 1 ? ' arquivo enviado.' : ' arquivos enviados.');
+        $message = $created > 0 ? $created . ($created === 1 ? ' arquivo enviado.' : ' arquivos enviados.') : '';
         if ($restored > 0) {
-            $message .= ' ' . $restored . ($restored === 1 ? ' arquivo existente restaurado para Draft.' : ' arquivos existentes restaurados para Draft.');
+            $message .= ' Aviso: ' . $restored . ($restored === 1 ? ' arquivo já existe. ' : ' arquivos já existem. ') . implode(' ', $restoredFiles);
         }
         if ($errors !== []) {
             $message .= ' Alguns arquivos foram rejeitados: ' . implode(' ', $errors);
         }
-        return redirect()->to('/colecoes/' . $id)->with('success', $message);
+        return redirect()->to('/colecoes/' . $id)->with($restored > 0 || $errors !== [] ? 'warning' : 'success', trim($message));
     }
 
     public function importGoogleDrive(string $id)
@@ -516,7 +608,7 @@ final class Collections extends BaseController
         ignore_user_abort(true);
         set_time_limit(0);
         $db = db_connect();
-        $collection = $db->table('collections')
+        $collection = $db->table('collections')->where('collections.deleted_at', null)
             ->select('collections.*, projects.status AS community_status')
             ->join('projects', 'projects.id = collections.project_id')
             ->where('collections.id', $id)

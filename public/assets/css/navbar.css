@@ -22,6 +22,72 @@ body {
     top: 72px;
 }
 
+.navbar .user-dropdown {
+    display: block;
+    position: relative;
+    min-width: 0;
+    margin-right: 32px;
+}
+
+.user-dropdown summary {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    min-height: 44px;
+    padding: .5rem;
+    border: 1px solid var(--ink);
+    border-radius: 4px;
+    cursor: pointer;
+    list-style: none;
+    overflow-wrap: anywhere;
+}
+
+.user-dropdown summary::-webkit-details-marker { display: none; }
+.user-dropdown summary::after { content: '▾'; }
+.user-dropdown summary:focus-visible, .password-change summary:focus-visible {
+    outline: 3px solid #f0b429;
+    outline-offset: 2px;
+}
+
+.user-dropdown-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + .4rem);
+    width: 180px;
+    padding: .35rem;
+    background: var(--surface);
+    border: 1px solid var(--soft);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+}
+
+.user-dropdown-panel a, .user-dropdown-panel button {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    width: 100%;
+    padding: .6rem .8rem;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.user-dropdown-panel a:hover, .user-dropdown-panel button:hover {
+    background: #e7f1fa;
+    text-decoration: underline;
+}
+
+.profile-data { margin: 1rem 0 2rem; }
+.profile-data div { margin-bottom: 1rem; }
+.profile-data dt { font-weight: 700; }
+.profile-data dd { margin: .3rem 0 0; overflow-wrap: anywhere; }
+.password-change form { margin-top: 1.5rem; }
+
 @media (max-width: 850px) {
     .navbar {
         height: 64px;
@@ -33,11 +99,13 @@ body {
     }
 
     .brand img {
-        width: 190px;
+        width: min(190px, 45vw);
         height: 56px;
     }
 
     body {
         padding-top: 64px;
     }
+
+    .navbar .user-dropdown { margin-right: 16px; max-width: 40vw; }
 }

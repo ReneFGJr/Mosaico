@@ -1,4 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const uploadWarning = document.querySelector('[data-status-warning]');
+    if (uploadWarning) {
+        uploadWarning.focus({ preventScroll: true });
+        uploadWarning.scrollIntoView({ block: 'nearest' });
+    }
+
+    const uploadForm = document.querySelector('[data-upload-form]');
+    const uploadDialog = document.querySelector('[data-upload-processing]');
+    if (uploadForm && uploadDialog) {
+        const submitButton = uploadForm.querySelector('button[type="submit"]');
+        let uploading = false;
+        uploadDialog.addEventListener('cancel', (event) => event.preventDefault());
+        uploadForm.addEventListener('submit', (event) => {
+            if (event.defaultPrevented) return;
+            if (uploading) {
+                event.preventDefault();
+                return;
+            }
+            uploading = true;
+            uploadDialog.showModal();
+            uploadDialog.querySelector('h2').focus();
+            document.body.classList.add('upload-in-progress');
+            uploadForm.setAttribute('aria-busy', 'true');
+            submitButton.disabled = true;
+        });
+        window.addEventListener('pageshow', () => {
+            uploading = false;
+            uploadDialog.close();
+            document.body.classList.remove('upload-in-progress');
+            uploadForm.removeAttribute('aria-busy');
+            submitButton.disabled = false;
+        });
+    }
+
     document.querySelectorAll('[data-drop-zone]').forEach((zone) => {
         const input = zone.querySelector('input[type="file"]');
         const list = zone.parentElement.querySelector('[data-file-list]');

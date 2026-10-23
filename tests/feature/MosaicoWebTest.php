@@ -38,6 +38,70 @@ final class MosaicoWebTest extends CIUnitTestCase
         $response->assertSee('Bem-vindo ao MOSAICO');
     }
 
+    public function testProfileRequiresAuthentication(): void
+    {
+        $this->get('/profile')->assertRedirectTo('/login');
+        $this->post('/profile/password', [])->assertRedirectTo('/login');
+    }
+
+    public function testProfileShowsAccountAndFirstNameMenuWithoutPasswordHash(): void
+    {
+        $response = $this->withSession([
+            'user_id' => '00000000-0000-4000-8000-000000000001',
+            'user_name' => 'Pessoa teste',
+        ])->get('/profile');
+
+        $response->assertStatus(200);
+        $response->assertSee('<summary>Pessoa</summary>');
+        $response->assertSee('Pessoa teste');
+        $response->assertSee('pessoa-teste@example.test');
+        $response->assertSee('/profile/password');
+        $response->assertDontSee('password_hash');
+    }
+
+    public function testPasswordChangeValidatesAndUpdatesOnlyCurrentAccount(): void
+    {
+        $id = '00000000-0000-4000-8000-000000000001';
+        $original = db_connect()->table('users')->where('id', $id)->get()->getRowArray()['password_hash'];
+        $otherId = '00000000-0000-4000-8000-000000000002';
+        db_connect()->table('users')->insert([
+            'id' => $otherId,
+            'email' => 'outra-pessoa@example.test',
+            'display_name' => 'Outra pessoa',
+            'password_hash' => $original,
+            'is_active' => true,
+        ]);
+        foreach ([
+            ['incorreta', 'nova-senha-segura', 'nova-senha-segura'],
+            ['senha-de-teste', 'curta', 'curta'],
+            ['senha-de-teste', 'nova-senha-segura', 'outra-senha-segura'],
+            ['senha-de-teste', str_repeat('á', 37), str_repeat('á', 37)],
+            ['senha-de-teste', 'senha-de-teste', 'senha-de-teste'],
+            ['senha-de-teste', 'nova-senha-segura', 'nova-senha-segura'],
+        ] as $index => [$current, $new, $confirmation]) {
+            $token = csrf_hash();
+            $response = $this->withHeaders(['Cookie' => 'csrf_cookie_name=' . $token])
+                ->withSession(['user_id' => $id, 'user_name' => 'Pessoa teste'])
+                ->post('/profile/password', [
+                    'csrf_test_name' => $token,
+                    'current_password' => $current,
+                    'new_password' => $new,
+                    'password_confirmation' => $confirmation,
+                    'user_id' => $otherId,
+                ]);
+            $response->assertRedirectTo('/profile');
+            $hash = db_connect()->table('users')->where('id', $id)->get()->getRowArray()['password_hash'];
+            if ($index < 5) {
+                $this->assertSame($original, $hash);
+            } else {
+                $this->assertTrue(password_verify($new, $hash));
+                $this->assertFalse(password_verify($current, $hash));
+            }
+        }
+        $this->assertSame(1, db_connect()->table('audit_events')->where('action', 'auth.password_changed')->countAllResults());
+        $this->assertSame($original, db_connect()->table('users')->where('id', $otherId)->get()->getRowArray()['password_hash']);
+    }
+
     public function testExpiredSessionIsDestroyedBeforeProtectedRequest(): void
     {
         $response = $this->withSession([

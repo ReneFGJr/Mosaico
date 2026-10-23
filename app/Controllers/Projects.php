@@ -53,7 +53,8 @@ final class Projects extends BaseController
             'title' => $project['name'],
             'contentClass' => 'content-wide',
             'project' => $project,
-            'collections' => db_connect()->table('collections')->where('project_id', $id)->orderBy('name')->get()->getResultArray(),
+            'collections' => db_connect()->table('collections')->where('project_id', $id)->where('deleted_at', null)->orderBy('name')->get()->getResultArray(),
+            'canManageCollections' => $this->canManage($id),
             'selectedCollectionId' => (string) $this->request->getCookie('mosaico_selected_collection'),
         ]);
     }

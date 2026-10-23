@@ -559,3 +559,36 @@ td small {
         flex-direction: column;
     }
 }
+.upload-in-progress { overflow: hidden; }
+.upload-processing {
+    width: min(420px, calc(100% - 2rem));
+    padding: 2rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    text-align: center;
+    box-shadow: var(--shadow);
+}
+.upload-processing::backdrop { background: rgba(20, 20, 20, .65); }
+.upload-processing h2 { margin: 1.25rem 0 .75rem; }
+.upload-processing p { margin: 0; }
+.upload-processing-spinner {
+    display: block;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto;
+    border: 5px solid #cbddec;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: upload-processing-spin .8s linear infinite;
+}
+@keyframes upload-processing-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .upload-processing-spinner { animation: none; border-color: var(--primary); }
+}
+.collection-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+.collection-card-head h3 { min-width: 0; overflow-wrap: anywhere; }
+.collection-card-actions { display: flex; justify-content: flex-end; flex-shrink: 0; }
+.collection-card:has(.action-menu[open]) { position: relative; z-index: 2; }
+.action-menu-panel > a.danger-action { color: var(--error); }

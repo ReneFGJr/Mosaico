@@ -19,6 +19,15 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
+    public static function ollamaImageDescriber(bool $getShared = true): \App\Libraries\OllamaImageDescriber
+    {
+        if ($getShared) {
+            return static::getSharedInstance('ollamaImageDescriber');
+        }
+
+        return new \App\Libraries\OllamaImageDescriber();
+    }
+
     /*
      * public static function example($getShared = true)
      * {

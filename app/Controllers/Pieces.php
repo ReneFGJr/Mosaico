@@ -17,7 +17,7 @@ final class Pieces extends BaseController
         $builder = db_connect()->table('pieces')->select('pieces.*, projects.name AS project_name')->join('projects', 'projects.id = pieces.project_id');
         $collection = null;
         if ($collectionId !== null) {
-            $collection = db_connect()->table('collections')->where('id', $collectionId)->get()->getRowArray();
+            $collection = db_connect()->table('collections')->where('deleted_at', null)->where('id', $collectionId)->get()->getRowArray();
             if (! $collection) {
                 throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
             }
@@ -34,7 +34,7 @@ final class Pieces extends BaseController
         $db = db_connect();
         $projects = $db->table('projects')->orderBy('name')->get()->getResultArray();
         $requestedCollectionId = (string) $this->request->getGet('collection');
-        $requestedCollection = $requestedCollectionId !== '' ? $db->table('collections')->where('id', $requestedCollectionId)->get()->getRowArray() : null;
+        $requestedCollection = $requestedCollectionId !== '' ? $db->table('collections')->where('deleted_at', null)->where('id', $requestedCollectionId)->get()->getRowArray() : null;
         if ($this->request->getMethod() === 'POST') {
             $model = new PieceModel();
             $data = ['project_id' => (string) $this->request->getPost('project_id'), 'code' => strtoupper(trim((string) $this->request->getPost('code'))), 'title' => trim((string) $this->request->getPost('title')), 'summary' => trim((string) $this->request->getPost('summary')), 'type' => (string) $this->request->getPost('type'), 'pedagogical_purpose' => trim((string) $this->request->getPost('pedagogical_purpose')), 'audience' => trim((string) $this->request->getPost('audience')), 'status' => 'draft', 'visibility' => 'private', 'created_by' => session('user_id')];
@@ -49,7 +49,7 @@ final class Pieces extends BaseController
             }
             return redirect()->back()->withInput()->with('errors', $model->errors());
         }
-        return view('pieces/form', ['title' => 'Nova peça', 'projects' => $projects, 'collections' => $db->table('collections')->orderBy('name')->get()->getResultArray(), 'selectedProjectId' => $requestedCollection['project_id'] ?? (string) $this->request->getGet('project'), 'selectedCollectionId' => $requestedCollectionId]);
+        return view('pieces/form', ['title' => 'Nova peça', 'projects' => $projects, 'collections' => $db->table('collections')->where('deleted_at', null)->orderBy('name')->get()->getResultArray(), 'selectedProjectId' => $requestedCollection['project_id'] ?? (string) $this->request->getGet('project'), 'selectedCollectionId' => $requestedCollectionId]);
     }
 
     public function show(string $id): string
@@ -60,7 +60,7 @@ final class Pieces extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
         $assets = $db->table('assets AS piece_assets')->select('piece_assets.*, COUNT(versions.version_number) AS version_count, MAX(versions.version_number) AS latest_version')->join('asset_versions AS versions', 'versions.asset_id = piece_assets.id', 'left')->where('piece_assets.piece_id', $id)->groupBy('piece_assets.id')->orderBy('piece_assets.created_at', 'DESC')->get()->getResultArray();
-        $pieceCollection = $db->table('piece_collections')->select('collection_id')->where('piece_id', $id)->get()->getRowArray();
+        $pieceCollection = $db->table('piece_collections')->select('collection_id')->join('collections', 'collections.id = piece_collections.collection_id')->where('collections.deleted_at', null)->where('piece_id', $id)->get()->getRowArray();
         $previewFile = $this->findPreviewFile($id);
         $projectId = (string) $piece['project_id'];
         $vocabularies = $db->table('vocabularies')->where('project_id', $projectId)->orderBy('name')->get()->getResultArray();
@@ -83,12 +83,51 @@ final class Pieces extends BaseController
             'backUrl' => $pieceCollection ? site_url('colecoes/' . $pieceCollection['collection_id']) : site_url('pecas'),
             'previewFile' => $previewFile,
             'previewType' => $this->previewType((string) ($previewFile['mime_type'] ?? '')),
+            'imageDescription' => $previewFile ? $db->table('piece_image_descriptions')->where('piece_id', $id)->where('source_file_id', $previewFile['id'])->get()->getRowArray() : null,
+            'peopleDetection' => $previewFile ? $this->latestPeopleDetection($id, $previewFile['id']) : null,
             'vocabularies' => $vocabularies,
             'terms' => $terms,
             'selectedTermIds' => $selectedTermIds,
             'canManageKeywords' => $this->canManage((string) $piece['project_id']),
             'canManageCategories' => $this->canManageCategories((string) $piece['project_id']),
         ]);
+    }
+
+    public function rename(string $id)
+    {
+        $db = db_connect();
+        $piece = $db->table('pieces')->where('id', $id)->get()->getRowArray();
+        if (! $piece) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+        if (! $this->canManage((string) $piece['project_id'])) {
+            return redirect()->to('/pecas/' . $id)->with('error', 'Você não tem permissão para editar o nome desta peça.');
+        }
+        $title = trim((string) $this->request->getPost('title'));
+        if ($title === '' || mb_strlen($title) > 255 || preg_match('/[\x00-\x1F\x7F]/u', $title)) {
+            return redirect()->to('/pecas/' . $id)->withInput()->with('rename_form_open', true)->with('error', 'Informe um nome da peça de até 255 caracteres, sem quebras de linha.');
+        }
+        $file = $this->findPreviewFile($id);
+        $data = ['title' => $title, 'updated_at' => date('Y-m-d H:i:s')];
+        if ($file) {
+            if ((string) $this->request->getPost('source_file_id') !== $file['id']) {
+                return redirect()->to('/pecas/' . $id)->with('error', 'O arquivo da peça mudou. Atualize a página e tente novamente.');
+            }
+            $filename = trim((string) $this->request->getPost('filename'));
+            $extension = pathinfo($file['original_name'], PATHINFO_EXTENSION);
+            if ($filename === '' || mb_strlen($filename) > 255 || preg_match('~[<>:"/\\\\|?*\x00-\x1F\x7F]~u', $filename)
+                || trim(pathinfo($filename, PATHINFO_FILENAME), '. ') === '' || str_ends_with($filename, '.')
+                || strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== strtolower($extension)) {
+                return redirect()->to('/pecas/' . $id)->withInput()->with('rename_form_open', true)->with('error', 'Informe um nome de arquivo válido de até 255 caracteres e mantenha a extensão original' . ($extension !== '' ? ' (.' . $extension . ')' : '') . '.');
+            }
+            $data['original_filename'] = $filename;
+        }
+        $db->transStart();
+        $db->table('pieces')->where('id', $id)->update($data);
+        (new AuditLogger())->record('piece.renamed', 'piece', $id, ['source_file_id' => $file['id'] ?? null]);
+        $db->transComplete();
+
+        return redirect()->to('/pecas/' . $id)->with($db->transStatus() ? 'success' : 'error', $db->transStatus() ? 'Nome da peça e do arquivo atualizados.' : 'Não foi possível atualizar o nome.');
     }
 
     public function keywords(string $id)
@@ -145,6 +184,141 @@ final class Pieces extends BaseController
         return redirect()->to('/pecas/' . $id)->with('success', 'Palavras-chave atualizadas.');
     }
 
+    public function describeImage(string $id)
+    {
+        $db = db_connect();
+        $piece = $db->table('pieces')->select('id, project_id')->where('id', $id)->get()->getRowArray();
+        if (! $piece) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+        if (! $this->canManage((string) $piece['project_id'])) {
+            return redirect()->to('/pecas/' . $id)->with('error', 'Você não tem permissão para gerar a descrição desta imagem.');
+        }
+        $file = $this->findPreviewFile($id);
+        if (! $file || $this->previewType((string) $file['mime_type']) !== 'image') {
+            return redirect()->to('/pecas/' . $id)->with('error', 'Esta peça não possui uma imagem disponível para descrição.');
+        }
+        // Reject a stale form rather than describing a newly uploaded version unexpectedly.
+        if ((string) $this->request->getPost('source_file_id') !== $file['id']) {
+            return redirect()->to('/pecas/' . $id)->with('error', 'O arquivo da peça mudou. Atualize a página e tente novamente.');
+        }
+
+        set_time_limit(150);
+        try {
+            $result = service('ollamaImageDescriber')->describe($file);
+        } catch (\RuntimeException $exception) {
+            return redirect()->to('/pecas/' . $id)->with('error', $exception->getMessage());
+        }
+        $now = date('Y-m-d H:i:s');
+        $data = $result + ['piece_id' => $id, 'generated_by' => session('user_id'), 'updated_at' => $now];
+        $db->transStart();
+        $existing = $db->table('piece_image_descriptions')->where('source_file_id', $file['id'])->get()->getRowArray();
+        if ($existing) {
+            $db->table('piece_image_descriptions')->where('source_file_id', $file['id'])->update($data);
+        } else {
+            $db->table('piece_image_descriptions')->insert($data + ['source_file_id' => $file['id'], 'created_at' => $now]);
+        }
+        (new AuditLogger())->record('piece.image_described', 'piece', $id, ['source_file_id' => $file['id'], 'model' => $result['model']]);
+        $db->transComplete();
+        if (! $db->transStatus()) {
+            return redirect()->to('/pecas/' . $id)->with('error', 'Não foi possível salvar a descrição. Tente novamente.');
+        }
+
+        return redirect()->to('/pecas/' . $id)->with('success', 'Descrição da imagem gerada. Revise o texto antes de utilizá-lo.');
+    }
+
+    public function detectPeople(string $id)
+    {
+        $file = $this->peopleImageForUpdate($id);
+        if (! is_array($file)) {
+            return $file;
+        }
+        set_time_limit(150);
+        try {
+            $result = service('ollamaImageDescriber')->detectPeople($file);
+        } catch (\RuntimeException $exception) {
+            return redirect()->to('/pecas/' . $id)->with('error', $exception->getMessage());
+        }
+        $detectionId = UuidModel::generateUuid();
+        $model = $result['model'];
+        unset($result['model']);
+        $db = db_connect();
+        $db->transStart();
+        $db->table('piece_people_detections')->insert([
+            'id' => $detectionId, 'piece_id' => $id, 'source_file_id' => $file['id'],
+            'result_json' => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'model' => $model, 'generated_by' => session('user_id'),
+            'generated_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s.u'),
+        ]);
+        (new AuditLogger())->record('piece.people_detected', 'piece', $id, ['source_file_id' => $file['id'], 'detection_id' => $detectionId, 'model' => $model]);
+        $db->transComplete();
+
+        return redirect()->to('/pecas/' . $id)->with($db->transStatus() ? 'success' : 'error', $db->transStatus()
+            ? 'Detecção de pessoas concluída. Revise a estimativa e as descrições.' : 'Não foi possível salvar a detecção de pessoas.');
+    }
+
+    public function peopleNames(string $id)
+    {
+        $file = $this->peopleImageForUpdate($id);
+        if (! is_array($file)) {
+            return $file;
+        }
+        $detection = $this->latestPeopleDetection($id, $file['id']);
+        if (! $detection || (string) $this->request->getPost('detection_id') !== $detection['id']) {
+            return redirect()->to('/pecas/' . $id)->with('error', 'A análise de pessoas mudou. Atualize a página antes de associar nomes.');
+        }
+        $result = json_decode($detection['result_json'], true, 16, JSON_THROW_ON_ERROR);
+        $submitted = $this->request->getPost('names');
+        if (! is_array($submitted) || count($submitted) !== count($result['people'])) {
+            return redirect()->to('/pecas/' . $id)->with('error', 'Revise os nomes associados às pessoas desta análise.');
+        }
+        $names = [];
+        foreach ($result['people'] as $index => $person) {
+            $name = $submitted[$index] ?? null;
+            if (! is_string($name) || mb_strlen(trim($name)) > 190 || preg_match('/[\x00-\x1F\x7F]/u', $name)) {
+                return redirect()->to('/pecas/' . $id)->with('error', 'Informe nomes de até 190 caracteres, sem quebras de linha.');
+            }
+            $names[$index] = trim($name);
+        }
+        $db = db_connect();
+        $db->transStart();
+        $db->table('piece_people_detections')->where('id', $detection['id'])->update([
+            'manual_names' => json_encode($names, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'names_updated_by' => session('user_id'), 'names_updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        (new AuditLogger())->record('piece.people_names_updated', 'piece', $id, ['detection_id' => $detection['id']]);
+        $db->transComplete();
+
+        return redirect()->to('/pecas/' . $id)->with($db->transStatus() ? 'success' : 'error', $db->transStatus()
+            ? 'Nomes associados manualmente.' : 'Não foi possível salvar os nomes.');
+    }
+
+    private function peopleImageForUpdate(string $id)
+    {
+        $piece = db_connect()->table('pieces')->select('id, project_id')->where('id', $id)->get()->getRowArray();
+        if (! $piece) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+        if (! $this->canManage((string) $piece['project_id'])) {
+            return redirect()->to('/pecas/' . $id)->with('error', 'Você não tem permissão para alterar os dados de pessoas desta imagem.');
+        }
+        $file = $this->findPreviewFile($id);
+        if (! $file || $this->previewType((string) $file['mime_type']) !== 'image') {
+            return redirect()->to('/pecas/' . $id)->with('error', 'Esta peça não possui uma imagem disponível para detectar pessoas.');
+        }
+        if ((string) $this->request->getPost('source_file_id') !== $file['id']) {
+            return redirect()->to('/pecas/' . $id)->with('error', 'O arquivo da peça mudou. Atualize a página e tente novamente.');
+        }
+
+        return $file;
+    }
+
+    private function latestPeopleDetection(string $pieceId, string $fileId): ?array
+    {
+        return db_connect()->table('piece_people_detections')->where('piece_id', $pieceId)->where('source_file_id', $fileId)
+            ->orderBy('generated_at', 'DESC')->orderBy('id', 'DESC')->get()->getRowArray();
+    }
+
     public function preview(string $id)
     {
         $file = $this->findPreviewFile($id);
@@ -161,7 +335,7 @@ final class Pieces extends BaseController
         return new RangeFileResponse(
             $path,
             (string) $file['mime_type'],
-            (string) $file['original_name'],
+            (string) (db_connect()->table('pieces')->select('original_filename')->where('id', $id)->get()->getRowArray()['original_filename'] ?: $file['original_name']),
             $this->request->getHeaderLine('Range'),
         );
     }

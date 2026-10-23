@@ -8,6 +8,8 @@ $routes->match(['get', 'post'], 'login', 'Auth::login');
 $routes->post('logout', 'Auth::logout', ['filter' => 'auth']);
 
 $routes->group('', ['filter' => 'auth'], static function ($routes): void {
+    $routes->get('profile', 'Profile::index');
+    $routes->post('profile/password', 'Profile::password');
     $routes->get('painel', 'Dashboard::index');
     $routes->get('comunidades', 'Projects::index');
     $routes->match(['get', 'post'], 'comunidades/nova', 'Projects::create');
@@ -16,6 +18,9 @@ $routes->group('', ['filter' => 'auth'], static function ($routes): void {
     $routes->get('comunidades/(:segment)', 'Projects::show/$1');
     $routes->match(['get', 'post'], 'comunidades/(:segment)/colecoes/nova', 'Collections::create/$1');
     $routes->get('colecoes/(:segment)/imagem', 'Collections::coverImage/$1');
+    $routes->match(['get', 'post'], 'colecoes/(:segment)/editar', 'Collections::edit/$1');
+    $routes->match(['get', 'post'], 'colecoes/(:segment)/trocar-imagem', 'Collections::changeImage/$1');
+    $routes->match(['get', 'post'], 'colecoes/(:segment)/deletar', 'Collections::delete/$1');
     $routes->post('colecoes/(:segment)/selecionar', 'Collections::select/$1');
     $routes->get('colecoes/(:segment)', 'Collections::show/$1');
     $routes->post('colecoes/(:segment)/arquivos', 'Collections::upload/$1');
@@ -34,6 +39,10 @@ $routes->group('', ['filter' => 'auth'], static function ($routes): void {
     $routes->get('pecas/(:segment)', 'Pieces::show/$1');
     $routes->get('pecas/(:segment)/miniatura', 'Pieces::thumbnail/$1');
     $routes->get('pecas/(:segment)/preview', 'Pieces::preview/$1');
+    $routes->post('pecas/(:segment)/nome', 'Pieces::rename/$1');
+    $routes->post('pecas/(:segment)/descrever-imagem', 'Pieces::describeImage/$1');
+    $routes->post('pecas/(:segment)/detectar-pessoas', 'Pieces::detectPeople/$1');
+    $routes->post('pecas/(:segment)/pessoas/nomes', 'Pieces::peopleNames/$1');
     $routes->post('pecas/(:segment)/palavras-chave', 'Pieces::keywords/$1');
     $routes->match(['get', 'post'], 'pecas/(:segment)/ativos/novo', 'Assets::create/$1');
     $routes->match(['get', 'post'], 'ativos/(:segment)/versoes/nova', 'Assets::version/$1');

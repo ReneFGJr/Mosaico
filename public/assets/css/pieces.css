@@ -117,3 +117,20 @@
         grid-template-columns: 1fr;
     }
 }
+.image-description {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--soft);
+}
+
+.image-description-text { overflow-wrap: anywhere; }
+.image-description button:disabled { cursor: wait; opacity: .7; }
+
+.detected-people { list-style: none; padding: 0; margin: 0; }
+.detected-people li { border: 1px solid var(--soft); border-radius: 4px; padding: 1rem; margin-bottom: 1rem; overflow-wrap: anywhere; }
+.detected-people h3 { margin: 0 0 .75rem; font-size: 1rem; }
+.detected-people dt { font-weight: 700; }
+.detected-people dd { margin: .2rem 0 .6rem; }
+.piece-rename summary { cursor: pointer; font-weight: 700; padding: .4rem 0; }
+.piece-rename summary:focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
+.piece-rename form { margin-top: 1rem; }

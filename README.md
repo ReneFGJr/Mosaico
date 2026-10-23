@@ -40,3 +40,15 @@ FLUSH PRIVILEGES;
 No PowerShell, se preferir fornecer a senha pela variável de ambiente do processo, defina `$env:MOSAICO_BOOTSTRAP_PASSWORD = '...'` antes do comando e remova-a depois com `Remove-Item Env:MOSAICO_BOOTSTRAP_PASSWORD`. Não use uma senha real em histórico de comandos ou documentação.
 
 Os testes usam SQLite em memória: `vendor/bin/phpunit`. A autenticação local é um adaptador inicial; OIDC/SAML, MFA, recuperação de senha e políticas institucionais ainda precisam ser definidos.
+
+## Ações das coleções
+
+Nas comunidades, os cards de coleção oferecem **Ações → Editar / Trocar imagem / Deletar** para usuários com `projects.manage`. Deletar exige confirmação e usa exclusão lógica (`collections.deleted_at`), preservando peças, vínculos, arquivos e auditoria. Coleções ocultas deixam de aparecer na navegação e não podem ser abertas, selecionadas ou modificadas pelas rotas de coleção. Execute `php spark migrate` após atualizar o projeto.
+
+## Descrição de imagens
+
+Execute `php spark migrate` para criar a tabela de descrições. Nas peças com prévia de imagem, usuários com a permissão `pieces.update` podem usar **Descrever Imagem**. A descrição é salva por arquivo, sem alterar o resumo da peça; versões novas não reutilizam a descrição da versão anterior. O texto gerado por IA deve ser revisado antes do uso.
+
+O servidor envia uma cópia JPEG da imagem, com proporção preservada e maior lado de até 1600 pixels, para `MOSAICO_OLLAMA_URL` (padrão: `https://ollama.brapci.inf.br`), via `POST /api/chat`. Não envia nomes, caminhos ou metadados do usuário. O modelo padrão é `qwen3.5:2b`; configure outro modelo de visão em `MOSAICO_OLLAMA_VISION_MODEL`, se necessário. Requer GD e cURL, aceita originais JPEG, PNG, GIF (primeiro quadro) e WebP de até 20 MB e 40 megapixels, e aguarda até 120 segundos pelo Ollama. Em caso de falha, a descrição anterior é preservada. A conexão HTTPS verifica certificados e usa `MOSAICO_CA_BUNDLE` quando configurado.
+
+O botão **Detectar pessoas** usa o mesmo serviço para estimar a quantidade e listar até 20 pessoas distinguíveis, descrevendo posições, roupas e ações visíveis. O resultado estruturado é validado antes de salvar. Usuários com `pieces.update` podem associar nomes manualmente a cada item; esses nomes não são enviados ao Ollama nem copiados para outras análises ou imagens. Novas detecções preservam os registros anteriores, e a página apresenta a análise mais recente do arquivo atual. Detecção e associação manual exigem POST com CSRF e geram eventos de auditoria sem registrar os nomes nos detalhes do evento. Execute `php spark migrate` para criar `piece_people_detections`.
