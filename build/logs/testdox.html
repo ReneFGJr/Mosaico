@@ -51,18 +51,17 @@
         </style>
     </head>
     <body>
-        <h2>Mosaico Web</h2>
+        <h2>Collection Actions</h2>
         <ul>
-            <li class="success">Login page is public</li>
-            <li class="success">Dashboard redirects anonymous visitor to login</li>
-            <li class="success">Expired session on protected post redirects to login before csrf validation</li>
-            <li class="success">Oversized upload is rejected before csrf with friendly message</li>
-            <li class="success">Invalid csrf redirects back without technical exception</li>
-            <li class="success">Authenticated user can see dashboard</li>
-            <li class="success">Repository core tables exist</li>
-            <li class="success">Community list offers community selection</li>
-            <li class="success">Community details offers management actions</li>
-            <li class="success">Collection pieces page only shows linked pieces</li>
+            <li class="success">Members can be managed only by community managers</li>
+            <li class="success">Collection members cannot publish or manage members</li>
+            <li class="success">Cards offer collection actions and forms</li>
+            <li class="success">Edit preserves collection identity</li>
+            <li class="success">Delete requires confirmation and preserves data</li>
+            <li class="success">Actions require permission and do not accept missing image</li>
+            <li class="success">Delete cannot bypass csrf with confirmation</li>
+            <li class="success">Renamed identical photo explains which existing file was restored</li>
+            <li class="success">Sidebar keywords combine filters and preserve view and search</li>
         </ul>
     </body>
 </html>

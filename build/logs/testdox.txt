@@ -1,12 +1,11 @@
-Mosaico Web
- [x] Login page is public
- [x] Dashboard redirects anonymous visitor to login
- [x] Expired session on protected post redirects to login before csrf validation
- [x] Oversized upload is rejected before csrf with friendly message
- [x] Invalid csrf redirects back without technical exception
- [x] Authenticated user can see dashboard
- [x] Repository core tables exist
- [x] Community list offers community selection
- [x] Community details offers management actions
- [x] Collection pieces page only shows linked pieces
+Collection Actions
+ [x] Members can be managed only by community managers
+ [x] Collection members cannot publish or manage members
+ [x] Cards offer collection actions and forms
+ [x] Edit preserves collection identity
+ [x] Delete requires confirmation and preserves data
+ [x] Actions require permission and do not accept missing image
+ [x] Delete cannot bypass csrf with confirmation
+ [x] Renamed identical photo explains which existing file was restored
+ [x] Sidebar keywords combine filters and preserve view and search
 

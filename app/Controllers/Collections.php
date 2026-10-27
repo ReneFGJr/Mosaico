@@ -102,6 +102,8 @@ final class Collections extends BaseController
             'contentClass' => 'content-wide',
             'collection' => $collection,
             'viewMode' => $viewMode,
+            'canAddDocuments' => $this->canAddDocuments($collection),
+            'canPublish' => (new ProjectAccess())->allows((string) session('user_id'), (string) $collection['project_id'], 'projects.manage'),
             'query' => $query,
             'selectedTerms' => $selectedTerms,
             'selectedTermIds' => $selectedTermIds,
@@ -117,6 +119,42 @@ final class Collections extends BaseController
                 ->get()
                 ->getResultArray(),
         ]);
+    }
+
+    public function members(string $id)
+    {
+        $collection = $this->manageableCollection($id);
+        if (! $collection) {
+            return redirect()->to('/comunidades')->with('error', 'Você não tem permissão para gerenciar membros desta coleção.');
+        }
+        $db = db_connect();
+        if ($this->request->getMethod() === 'POST') {
+            $userId = (string) $this->request->getPost('user_id');
+            $privilege = (string) $this->request->getPost('privilege');
+            if (! in_array($privilege, ['view', 'add', 'remove'], true)
+                || ! $db->table('users')->where('id', $userId)->where('is_active', true)->countAllResults()) {
+                return redirect()->to('/colecoes/' . $id . '/membros')->with('error', 'Selecione um usuário ativo e um privilégio válido.');
+            }
+            $db->transStart();
+            $db->table('collection_members')->where(['collection_id' => $id, 'user_id' => $userId])->delete();
+            if ($privilege !== 'remove') {
+                $db->table('collection_members')->insert(['collection_id' => $id, 'user_id' => $userId, 'privilege' => $privilege, 'created_at' => date('Y-m-d H:i:s')]);
+            }
+            (new AuditLogger())->record('collection.member_changed', 'collection', $id, ['user_id' => $userId, 'privilege' => $privilege]);
+            $db->transComplete();
+            return redirect()->to('/colecoes/' . $id . '/membros')->with($db->transStatus() ? 'success' : 'error', $db->transStatus() ? 'Membros atualizados.' : 'Não foi possível atualizar os membros.');
+        }
+        return view('collections/members', [
+            'title' => 'Membros', 'collection' => $collection,
+            'users' => $db->table('users')->select('id, display_name, email')->where('is_active', true)->orderBy('display_name')->get()->getResultArray(),
+            'members' => $db->table('collection_members')->select('users.id, users.display_name, users.email, collection_members.privilege')->join('users', 'users.id = collection_members.user_id')->where('collection_id', $id)->orderBy('users.display_name')->get()->getResultArray(),
+        ]);
+    }
+
+    private function canAddDocuments(array $collection): bool
+    {
+        return $this->canManage((string) $collection['project_id'])
+            || db_connect()->table('collection_members')->where(['collection_id' => $collection['id'], 'user_id' => session('user_id'), 'privilege' => 'add'])->countAllResults() > 0;
     }
 
     public function coverImage(string $id)
@@ -189,7 +227,7 @@ final class Collections extends BaseController
         if (! $collection) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
-        if (! $this->canManage((string) $collection['project_id'])) {
+        if (! (new ProjectAccess())->allows((string) session('user_id'), (string) $collection['project_id'], 'projects.manage')) {
             return redirect()->to('/colecoes/' . $id)->with('error', 'Você não tem permissão para executar ações nesta coleção.');
         }
 
@@ -425,7 +463,7 @@ final class Collections extends BaseController
         if (! $collection || $collection['community_status'] === 'excluded') {
             return redirect()->back()->with('error', 'Coleção indisponível para upload.');
         }
-        if (! $this->canManage((string) $collection['project_id'])) {
+        if (! $this->canAddDocuments($collection)) {
             return redirect()->back()->with('error', 'Você não tem permissão para enviar arquivos nesta coleção.');
         }
 
@@ -589,7 +627,7 @@ final class Collections extends BaseController
             $emit(['type' => 'fatal', 'message' => 'Coleção indisponível para importação.']);
             exit;
         }
-        if (! $this->canManage((string) $collection['project_id'])) {
+        if (! $this->canAddDocuments($collection)) {
             $emit(['type' => 'fatal', 'message' => 'Você não tem permissão para importar arquivos nesta coleção.']);
             exit;
         }

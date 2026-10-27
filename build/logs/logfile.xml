@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite name="D:\Projeto\Mosaico\phpunit.dist.xml" tests="10" assertions="128" errors="0" failures="0" skipped="0" time="0.424612">
-    <testsuite name="App" tests="10" assertions="128" errors="0" failures="0" skipped="0" time="0.424612">
-      <testsuite name="MosaicoWebTest" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" tests="10" assertions="128" errors="0" failures="0" skipped="0" time="0.424612">
-        <testcase name="testLoginPageIsPublic" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="21" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.060709"/>
-        <testcase name="testDashboardRedirectsAnonymousVisitorToLogin" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="28" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.026896"/>
-        <testcase name="testExpiredSessionOnProtectedPostRedirectsToLoginBeforeCsrfValidation" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="33" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.028203"/>
-        <testcase name="testOversizedUploadIsRejectedBeforeCsrfWithFriendlyMessage" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="40" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.028521"/>
-        <testcase name="testInvalidCsrfRedirectsBackWithoutTechnicalException" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="56" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.028905"/>
-        <testcase name="testAuthenticatedUserCanSeeDashboard" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="68" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="8" time="0.030205"/>
-        <testcase name="testRepositoryCoreTablesExist" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="82" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="7" time="0.023968"/>
-        <testcase name="testCommunityListOffersCommunitySelection" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="93" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="7" time="0.032070"/>
-        <testcase name="testCommunityDetailsOffersManagementActions" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="113" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="10" time="0.029641"/>
-        <testcase name="testCollectionPiecesPageOnlyShowsLinkedPieces" file="D:\Projeto\Mosaico\tests\feature\MosaicoWebTest.php" line="144" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="86" time="0.135496"/>
+  <testsuite name="D:\www\Mosaico\phpunit.dist.xml" tests="9" assertions="131" errors="0" failures="0" skipped="0" time="0.880406">
+    <testsuite name="App" tests="9" assertions="131" errors="0" failures="0" skipped="0" time="0.880406">
+      <testsuite name="CollectionActionsTest" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" tests="9" assertions="131" errors="0" failures="0" skipped="0" time="0.880406">
+        <testcase name="testMembersCanBeManagedOnlyByCommunityManagers" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="49" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="11" time="0.127022"/>
+        <testcase name="testCollectionMembersCannotPublishOrManageMembers" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="65" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="8" time="0.068223"/>
+        <testcase name="testCardsOfferCollectionActionsAndForms" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="76" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="10" time="0.112598"/>
+        <testcase name="testEditPreservesCollectionIdentity" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="90" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="6" time="0.059013"/>
+        <testcase name="testDeleteRequiresConfirmationAndPreservesData" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="101" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="17" time="0.105150"/>
+        <testcase name="testActionsRequirePermissionAndDoNotAcceptMissingImage" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="134" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="10" time="0.076783"/>
+        <testcase name="testDeleteCannotBypassCsrfWithConfirmation" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="146" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="3" time="0.064937"/>
+        <testcase name="testRenamedIdenticalPhotoExplainsWhichExistingFileWasRestored" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="156" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="12" time="0.085078"/>
+        <testcase name="testSidebarKeywordsCombineFiltersAndPreserveViewAndSearch" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="204" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="54" time="0.181603"/>
       </testsuite>
     </testsuite>
   </testsuite>

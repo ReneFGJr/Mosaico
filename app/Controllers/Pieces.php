@@ -58,6 +58,13 @@ final class Pieces extends BaseController
         if ($this->request->getMethod() === 'POST') {
             $model = new PieceModel();
             $data = ['project_id' => (string) $this->request->getPost('project_id'), 'code' => strtoupper(trim((string) $this->request->getPost('code'))), 'title' => trim((string) $this->request->getPost('title')), 'summary' => trim((string) $this->request->getPost('summary')), 'type' => (string) $this->request->getPost('type'), 'pedagogical_purpose' => trim((string) $this->request->getPost('pedagogical_purpose')), 'audience' => trim((string) $this->request->getPost('audience')), 'status' => 'draft', 'visibility' => 'private', 'created_by' => session('user_id')];
+            $collectionId = (string) $this->request->getPost('collection_id');
+            $targetCollection = $db->table('collections')->where('id', $collectionId)->where('project_id', $data['project_id'])->where('deleted_at', null)->get()->getRowArray();
+            $canCreate = (new ProjectAccess())->allows((string) session('user_id'), $data['project_id'], 'pieces.create');
+            $memberCanAdd = $targetCollection && $db->table('collection_members')->where(['collection_id' => $collectionId, 'user_id' => session('user_id'), 'privilege' => 'add'])->countAllResults() > 0;
+            if ((! $canCreate && ! $memberCanAdd) || ($collectionId !== '' && ! $targetCollection)) {
+                return redirect()->to('/comunidades')->with('error', 'Você não tem permissão para adicionar documentos neste destino.');
+            }
             if ($model->insert($data)) {
                 $id = (string) $model->getInsertID();
                 $collectionId = (string) $this->request->getPost('collection_id');

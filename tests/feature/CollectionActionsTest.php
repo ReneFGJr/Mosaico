@@ -46,6 +46,33 @@ final class CollectionActionsTest extends CIUnitTestCase
         return $this->withHeaders(['Cookie' => 'csrf_cookie_name=' . $token])->post($url, $data + ['csrf_test_name' => $token]);
     }
 
+    public function testMembersCanBeManagedOnlyByCommunityManagers(): void
+    {
+        $this->request('membros')->assertRedirectTo('/comunidades');
+        $this->grantManager();
+        $this->request('membros')->assertStatus(200);
+        foreach (['view', 'add'] as $privilege) {
+            $this->request('membros', ['user_id' => $this->userId, 'privilege' => $privilege])->assertRedirect();
+            $row = db_connect()->table('collection_members')->where('collection_id', $this->collection['id'])->get()->getRowArray();
+            $this->assertSame($privilege, $row['privilege']);
+        }
+        $this->request('membros', ['user_id' => $this->userId, 'privilege' => 'publish'])->assertRedirect();
+        $this->assertSame('add', db_connect()->table('collection_members')->get()->getRowArray()['privilege']);
+        $this->request('membros', ['user_id' => $this->userId, 'privilege' => 'remove'])->assertRedirect();
+        $this->assertSame(0, db_connect()->table('collection_members')->countAllResults());
+    }
+
+    public function testCollectionMembersCannotPublishOrManageMembers(): void
+    {
+        foreach (['view', 'add'] as $privilege) {
+            db_connect()->table('collection_members')->where('user_id', $this->userId)->delete();
+            db_connect()->table('collection_members')->insert(['collection_id' => $this->collection['id'], 'user_id' => $this->userId, 'privilege' => $privilege]);
+            $this->request('pecas/acoes', ['bulk_action' => 'publish'])->assertRedirect();
+            $this->assertStringContainsString('permissão', (string) session('error'));
+            $this->request('membros', ['user_id' => $this->userId, 'privilege' => 'add'])->assertRedirectTo('/comunidades');
+        }
+    }
+
     public function testCardsOfferCollectionActionsAndForms(): void
     {
         $this->grantManager();
