@@ -111,10 +111,13 @@ final class MosaicoWebTest extends CIUnitTestCase
         foreach ([
             ['incorreta', 'nova-senha-segura', 'nova-senha-segura'],
             ['senha-de-teste', 'curta', 'curta'],
-            ['senha-de-teste', 'nova-senha-segura', 'outra-senha-segura'],
+            ['senha-de-teste', 'nova-senha123', 'outra-senha123'],
             ['senha-de-teste', str_repeat('á', 37), str_repeat('á', 37)],
             ['senha-de-teste', 'senha-de-teste', 'senha-de-teste'],
-            ['senha-de-teste', 'nova-senha-segura', 'nova-senha-segura'],
+            ['senha-de-teste', 'abcdefgh', 'abcdefgh'],
+            ['senha-de-teste', '12345678', '12345678'],
+            ['senha-de-teste', 'Abcd123', 'Abcd123'],
+            ['senha-de-teste', 'Abcd1234', 'Abcd1234'],
         ] as $index => [$current, $new, $confirmation]) {
             $token = csrf_hash();
             $response = $this->withHeaders(['Cookie' => 'csrf_cookie_name=' . $token])
@@ -128,7 +131,7 @@ final class MosaicoWebTest extends CIUnitTestCase
                 ]);
             $response->assertRedirectTo('/profile');
             $hash = db_connect()->table('users')->where('id', $id)->get()->getRowArray()['password_hash'];
-            if ($index < 5) {
+            if ($index < 8) {
                 $this->assertSame($original, $hash);
             } else {
                 $this->assertTrue(password_verify($new, $hash));

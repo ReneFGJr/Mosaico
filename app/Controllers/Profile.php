@@ -40,8 +40,9 @@ final class Profile extends BaseController
             usleep(250000);
             return redirect()->to('/profile')->with('error', 'A senha atual está incorreta.')->with('password_form_open', true);
         }
-        if (mb_strlen($password) < 12 || strlen($password) > 72) {
-            return redirect()->to('/profile')->with('error', 'A nova senha deve ter pelo menos 12 caracteres e no máximo 72 bytes.')->with('password_form_open', true);
+        if (mb_strlen($password) < 8 || strlen($password) > 72
+            || ! preg_match('/\p{L}/u', $password) || ! preg_match('/[0-9]/', $password)) {
+            return redirect()->to('/profile')->with('error', 'A nova senha deve ter pelo menos 8 caracteres, incluindo letras e números, e no máximo 72 bytes.')->with('password_form_open', true);
         }
         if ($password !== $confirmation) {
             return redirect()->to('/profile')->with('error', 'A confirmação da nova senha não confere.')->with('password_form_open', true);

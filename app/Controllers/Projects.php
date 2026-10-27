@@ -8,6 +8,70 @@ use App\Models\UuidModel;
 
 final class Projects extends BaseController
 {
+    private const COVER_IMAGE_TYPES = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+
+    public function changeImage(string $id)
+    {
+        $project = (new ProjectModel())->where('status !=', 'excluded')->find($id);
+        if (! $project || ! $this->canManage($id)) {
+            return redirect()->to('/comunidades')->with('error', 'Você não tem permissão para trocar a imagem desta comunidade.');
+        }
+        if ($this->request->getMethod() === 'POST') {
+            $image = $this->request->getFile('cover_image');
+            if (! $image || ! $image->isValid() || $image->getSize() > 5 * 1024 * 1024) {
+                return redirect()->to('/comunidades/' . $id . '/trocar-imagem')->with('error', 'Selecione uma imagem válida de até 5 MB.');
+            }
+            $mime = $image->getMimeType();
+            $dimensions = @getimagesize($image->getTempName());
+            if (! isset(self::COVER_IMAGE_TYPES[$mime]) || ! $dimensions || ($dimensions['mime'] ?? '') !== $mime || $dimensions[0] * $dimensions[1] > 40000000) {
+                return redirect()->to('/comunidades/' . $id . '/trocar-imagem')->with('error', 'Use uma imagem JPEG, PNG, WebP ou GIF de até 40 megapixels.');
+            }
+            $directory = 'community-covers/' . $id;
+            $filename = $id . '-' . UuidModel::generateUuid() . '.' . self::COVER_IMAGE_TYPES[$mime];
+            try {
+                $image->move(WRITEPATH . $directory, $filename);
+            } catch (\CodeIgniter\HTTP\Exceptions\HTTPException $exception) {
+                return redirect()->to('/comunidades/' . $id . '/trocar-imagem')->with('error', 'Não foi possível armazenar a imagem. Tente novamente.');
+            }
+            $db = db_connect();
+            $db->transStart();
+            $db->table('projects')->where('id', $id)->update(['cover_image' => $directory . '/' . $filename, 'updated_at' => date('Y-m-d H:i:s')]);
+            (new AuditLogger())->record('community.image_updated', 'community', $id);
+            $db->transComplete();
+            return redirect()->to('/comunidades')->with($db->transStatus() ? 'success' : 'error', $db->transStatus() ? 'Imagem da comunidade atualizada.' : 'Não foi possível atualizar a imagem da comunidade.');
+        }
+        return view('projects/image', ['title' => 'Trocar imagem', 'project' => $project, 'mode' => 'image']);
+    }
+
+    public function coverImage(string $id)
+    {
+        $project = db_connect()->table('projects')->where('status !=', 'excluded')
+            ->select('cover_image')
+            ->where('id', $id)
+            ->get()
+            ->getRowArray();
+        if (! $project || ! $project['cover_image']) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $root = realpath(WRITEPATH . 'community-covers');
+        $path = realpath(WRITEPATH . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, (string) $project['cover_image']));
+        if ($root === false || $path === false || ! is_file($path) || ! str_starts_with($path, $root . DIRECTORY_SEPARATOR)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $mimeType = mime_content_type($path);
+        if (! is_string($mimeType) || ! in_array($mimeType, array_keys(self::COVER_IMAGE_TYPES), true)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        return $this->response
+            ->setHeader('Content-Type', $mimeType)
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setHeader('Cache-Control', 'private, max-age=86400')
+            ->setBody((string) file_get_contents($path));
+    }
+
     public function index(): string
     {
         $projects = (new ProjectModel())->where('status !=', 'excluded')->orderBy('name')->findAll();

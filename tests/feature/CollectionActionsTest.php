@@ -73,6 +73,22 @@ final class CollectionActionsTest extends CIUnitTestCase
         }
     }
 
+    public function testCommunityImageRequiresManagerAndValidUpload(): void
+    {
+        $url = '/comunidades/' . $this->collection['project_id'] . '/trocar-imagem';
+        $this->withSession(['user_id' => $this->userId])->get($url)->assertRedirectTo('/comunidades');
+        $this->grantManager();
+        $response = $this->withSession(['user_id' => $this->userId])->get($url);
+        $response->assertStatus(200);
+        $response->assertSee('enctype="multipart/form-data"');
+        $token = csrf_hash();
+        $this->withHeaders(['Cookie' => 'csrf_cookie_name=' . $token])
+            ->withSession(['user_id' => $this->userId])
+            ->post($url, ['csrf_test_name' => $token])->assertRedirectTo($url);
+        $this->assertNull(db_connect()->table('projects')->where('id', $this->collection['project_id'])->get()->getRowArray()['cover_image']);
+        $this->withSession(['user_id' => $this->userId])->get('/comunidades')->assertSee($url);
+    }
+
     public function testCardsOfferCollectionActionsAndForms(): void
     {
         $this->grantManager();
