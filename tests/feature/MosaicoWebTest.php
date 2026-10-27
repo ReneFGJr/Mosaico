@@ -59,6 +59,43 @@ final class MosaicoWebTest extends CIUnitTestCase
         $response->assertDontSee('password_hash');
     }
 
+    public function testProfileListsOnlyMembershipCommunitiesAndTheirActiveCollections(): void
+    {
+        $db = db_connect();
+        $userId = '00000000-0000-4000-8000-000000000001';
+        $roleIds = array_column($db->table('roles')->limit(2)->get()->getResultArray(), 'id');
+        foreach (['linked', 'unlinked', 'excluded'] as $key) {
+            $projectId = (new ProjectModel())->insert([
+                'code' => $key, 'name' => 'Comunidade ' . $key,
+                'status' => $key === 'excluded' ? 'excluded' : 'active',
+            ]);
+            (new CollectionModel())->insert([
+                'project_id' => $projectId, 'code' => $key, 'name' => 'Coleção ' . $key,
+            ]);
+            if ($key !== 'unlinked') {
+                foreach ($roleIds as $roleId) {
+                    $db->table('memberships')->insert([
+                        'project_id' => $projectId, 'user_id' => $userId, 'role_id' => $roleId,
+                    ]);
+                }
+            }
+            if ($key === 'linked') {
+                $deletedId = (new CollectionModel())->insert([
+                    'project_id' => $projectId, 'code' => 'deleted', 'name' => 'Coleção removida',
+                ]);
+                (new CollectionModel())->delete($deletedId);
+            }
+        }
+
+        $response = $this->withSession(['user_id' => $userId, 'user_name' => 'Pessoa teste'])->get('/profile');
+        $response->assertStatus(200);
+        $response->assertSee('Comunidade linked');
+        $response->assertSee('Coleção linked');
+        $response->assertDontSee('Coleção unlinked');
+        $response->assertDontSee('Coleção excluded');
+        $response->assertDontSee('Coleção removida');
+    }
+
     public function testPasswordChangeValidatesAndUpdatesOnlyCurrentAccount(): void
     {
         $id = '00000000-0000-4000-8000-000000000001';

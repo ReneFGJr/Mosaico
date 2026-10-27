@@ -3,6 +3,7 @@
 <header class="page-head">
     <div><p class="eyebrow">Minha conta</p><h1>Meu perfil</h1></div>
 </header>
+<div class="profile-layout">
 <section class="form-card profile-card" aria-label="Dados do usuário">
     <h2>Dados do usuário</h2>
     <dl class="profile-data">
@@ -21,4 +22,28 @@
         </form>
     </details>
 </section>
+<section class="form-card profile-card" aria-labelledby="profile-links-title">
+    <h2 id="profile-links-title">Comunidades e coleções vinculadas</h2>
+    <p>As coleções abaixo pertencem às comunidades às quais você está vinculado.</p>
+    <?php if ($communities === []): ?>
+        <p>Você ainda não está vinculado a nenhuma comunidade.</p>
+    <?php else: ?>
+        <?php foreach ($communities as $community): ?>
+            <div class="profile-community">
+                <h3><a href="<?= site_url('comunidades/' . $community['id']) ?>"><?= esc($community['name']) ?></a></h3>
+                <?php $linkedCollections = array_filter($collections, static fn (array $collection): bool => $collection['project_id'] === $community['id']); ?>
+                <?php if ($linkedCollections === []): ?>
+                    <p>Nenhuma coleção vinculada a esta comunidade.</p>
+                <?php else: ?>
+                    <ul>
+                        <?php foreach ($linkedCollections as $collection): ?>
+                            <li><a href="<?= site_url('colecoes/' . $collection['id']) ?>"><?= esc($collection['name']) ?></a></li>
+                        <?php endforeach ?>
+                    </ul>
+                <?php endif ?>
+            </div>
+        <?php endforeach ?>
+    <?php endif ?>
+</section>
+</div>
 <?= $this->endSection() ?>

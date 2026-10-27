@@ -11,7 +11,22 @@ final class Profile extends BaseController
         $user = db_connect()->table('users')->select('display_name, email')
             ->where('id', session('user_id'))->get()->getRowArray();
 
-        return view('profile/index', ['title' => 'Meu perfil', 'user' => $user]);
+        $db = db_connect();
+        $communities = $db->table('projects')->distinct()->select('projects.id, projects.name')
+            ->join('memberships', 'memberships.project_id = projects.id')
+            ->where('memberships.user_id', session('user_id'))
+            ->where('projects.status !=', 'excluded')->orderBy('projects.name')->get()->getResultArray();
+        $collections = [];
+        if ($communities !== []) {
+            $collections = $db->table('collections')->select('id, name, project_id')
+                ->whereIn('project_id', array_column($communities, 'id'))
+                ->where('deleted_at', null)->orderBy('name')->get()->getResultArray();
+        }
+
+        return view('profile/index', [
+            'title' => 'Meu perfil', 'user' => $user,
+            'communities' => $communities, 'collections' => $collections,
+        ]);
     }
 
     public function password()
