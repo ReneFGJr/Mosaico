@@ -19,10 +19,11 @@
                     <?= csrf_field() ?>
                     <input type="hidden" name="source_file_id" value="<?= esc($previewFile['id']) ?>">
                     <input type="hidden" name="detection_id" value="<?= esc($peopleDetection['id']) ?>">
-                    <p class="form-help">Você pode informar os nomes manualmente. A associação vale para esta análise; uma nova detecção gera outra lista.</p>
+                    <p class="form-help">Selecione uma pessoa do controle de autoridade da comunidade ou cadastre um novo nome. O qualificador é opcional e ajuda a distinguir pessoas com o mesmo nome. Uma nova detecção gera outra lista para associação.</p>
             <?php endif ?>
             <ol class="detected-people">
                 <?php foreach ($detectionResult['people'] as $index => $person): ?>
+                    <?php $authorityLink = $personAuthorityLinks[$index] ?? null; ?>
                     <li>
                         <h3>Pessoa <?= esc($index + 1) ?></h3>
                         <dl>
@@ -31,9 +32,20 @@
                             <div><dt>Ação</dt><dd><?= esc($person['activity']) ?></dd></div>
                         </dl>
                         <?php if ($canManageKeywords): ?>
-                            <label>Nome informado manualmente — pessoa <?= esc($index + 1) ?><input type="text" name="names[<?= esc($index) ?>]" value="<?= esc($manualNames[$index] ?? '') ?>" maxlength="190" autocomplete="off" placeholder="Opcional"></label>
+                            <label>Autoridade da comunidade — pessoa <?= esc($index + 1) ?>
+                                <select name="authority_ids[<?= esc($index) ?>]">
+                                    <option value="">Sem associação / cadastrar novo nome</option>
+                                    <?php foreach ($personAuthorities as $authority): ?>
+                                        <option value="<?= esc($authority['id']) ?>" <?= ($authorityLink['id'] ?? '') === $authority['id'] ? 'selected' : '' ?>><?= esc($authority['preferred_name'] . ($authority['qualifier'] !== '' ? ' — ' . $authority['qualifier'] : '')) ?></option>
+                                    <?php endforeach ?>
+                                </select>
+                            </label>
+                            <label>Novo nome<input type="text" name="names[<?= esc($index) ?>]" value="<?= esc($authorityLink ? '' : ($manualNames[$index] ?? '')) ?>" maxlength="190" autocomplete="off" placeholder="Preencha apenas para cadastrar"></label>
+                            <label>Qualificador do novo nome<input type="text" name="qualifiers[<?= esc($index) ?>]" maxlength="190" placeholder="Ex.: instituição ou área de atuação (opcional)"></label>
+                        <?php elseif ($authorityLink): ?>
+                            <p><strong>Nome associado:</strong> <?= esc($authorityLink['preferred_name'] . ($authorityLink['qualifier'] !== '' ? ' — ' . $authorityLink['qualifier'] : '')) ?></p>
                         <?php elseif (($manualNames[$index] ?? '') !== ''): ?>
-                            <p><strong>Nome informado manualmente:</strong> <?= esc($manualNames[$index]) ?></p>
+                            <p><strong>Nome associado:</strong> <?= esc($manualNames[$index]) ?></p>
                         <?php endif ?>
                     </li>
                 <?php endforeach ?>

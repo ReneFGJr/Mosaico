@@ -173,4 +173,69 @@ final class CollectionActionsTest extends CIUnitTestCase
             unlink($temporary);
         }
     }
+
+    public function testSidebarKeywordsCombineFiltersAndPreserveViewAndSearch(): void
+    {
+        $db = db_connect();
+        $vocabulary = '60000000-0000-4000-8000-000000000001';
+        $first = '70000000-0000-4000-8000-000000000001';
+        $second = '70000000-0000-4000-8000-000000000002';
+        $db->table('vocabularies')->insert(['id' => $vocabulary, 'project_id' => $this->collection['project_id'], 'code' => 'FILTER', 'name' => 'Assuntos']);
+        foreach ([$first => 'Saúde', $second => 'Educação'] as $id => $label) {
+            $db->table('terms')->insert(['id' => $id, 'vocabulary_id' => $vocabulary, 'code' => $id, 'label' => $label, 'is_active' => true]);
+        }
+        foreach (['Ambas as tags' => [$first, $second], 'Somente saúde' => [$first], 'Somente educação' => [$second]] as $title => $termIds) {
+            $pieceId = \App\Models\UuidModel::generateUuid();
+            $db->table('pieces')->insert(['id' => $pieceId, 'project_id' => $this->collection['project_id'], 'code' => $pieceId, 'title' => $title, 'type' => 'image']);
+            $db->table('piece_collections')->insert(['piece_id' => $pieceId, 'collection_id' => $this->collection['id']]);
+            foreach ($termIds as $termId) {
+                $db->table('piece_terms')->insert(['piece_id' => $pieceId, 'term_id' => $termId]);
+            }
+        }
+        $params = http_build_query(['keyword_filter' => '1', 'terms' => [$first, $second], 'view' => 'list']);
+        $response = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste'])->get('/colecoes/' . $this->collection['id'] . '?' . $params);
+        $response->assertStatus(200);
+        $response->assertSee('sidebar-keywords');
+        $response->assertSee('name="terms[]"');
+        $response->assertSee('Assuntos');
+        $response->assertSee('Ambas as tags');
+        $response->assertDontSee('Somente saúde');
+        $response->assertDontSee('Somente educação');
+        $response->assertSee('name="view" value="list"');
+        $response->assertSee('name="terms[]" value="' . $first . '"');
+        $saved = session('keyword_filters');
+        $response = $this->withSession(['user_id' => $this->userId, 'keyword_filters' => $saved])->get('/colecoes/' . $this->collection['id']);
+        $response->assertSee('Ambas as tags');
+        $response->assertDontSee('Somente saúde');
+        $response = $this->withSession(['user_id' => $this->userId, 'keyword_filters' => $saved])->get('/colecoes/' . $this->collection['id'] . '?keyword_filter=1');
+        $response->assertSee('Somente saúde');
+        $response->assertSee('Somente educação');
+        $response = $this->withSession(['user_id' => $this->userId])->get('/colecoes/' . $this->collection['id'] . '?term=' . $first);
+        $response->assertSee('Somente saúde');
+        $response->assertDontSee('Somente educação');
+        $otherProjects = new ProjectModel();
+        $otherProjects->insert(['code' => 'OTHER-FILTER', 'name' => 'Outra comunidade']);
+        $otherProject = $otherProjects->where('code', 'OTHER-FILTER')->first();
+        $otherVocabulary = '60000000-0000-4000-8000-000000000002';
+        $otherTerm = '70000000-0000-4000-8000-000000000003';
+        $db->table('vocabularies')->insert(['id' => $otherVocabulary, 'project_id' => $otherProject['id'], 'code' => 'OTHER-TAGS', 'name' => 'Outra categoria']);
+        $db->table('terms')->insert(['id' => $otherTerm, 'vocabulary_id' => $otherVocabulary, 'code' => 'FOREIGN', 'label' => 'Termo de outra comunidade', 'is_active' => true]);
+        $response = $this->withSession(['user_id' => $this->userId])->get('/colecoes/' . $this->collection['id'] . '?' . http_build_query(['keyword_filter' => '1', 'terms' => [$first, $otherTerm]]));
+        $response->assertSee('Somente saúde');
+        $response->assertDontSee('Somente educação');
+        $response->assertDontSee('Termo de outra comunidade');
+        foreach (['thumbnail' => 'thumbnail-grid', 'cards' => 'card-grid', 'list' => 'piece-list', 'details' => 'table-wrap'] as $mode => $class) {
+            $catalogParams = http_build_query(['keyword_filter' => '1', 'project' => $this->collection['project_id'], 'terms' => [$first, $second], 'view' => $mode, 'q' => 'Ambas']);
+            $response = $this->withSession(['user_id' => $this->userId])->get('/pecas?' . $catalogParams);
+            $response->assertStatus(200);
+            $response->assertSee('class="' . $class);
+            $response->assertSee('Ambas as tags');
+            $response->assertDontSee('Somente saúde');
+            $response->assertDontSee('Somente educação');
+            $response->assertSee('name="project" value="' . $this->collection['project_id'] . '"');
+            $response->assertSee('name="terms[]" value="' . $first . '"');
+            $response->assertSee('Modo de visualização');
+            $response->assertDontSee('data-bulk-actions');
+        }
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\AuditLogger;
 use App\Libraries\GoogleDriveImporter;
 use App\Libraries\ProjectAccess;
+use App\Libraries\KeywordFilter;
 use App\Models\CollectionModel;
 use App\Models\ProjectModel;
 use App\Models\UuidModel;
@@ -66,29 +67,14 @@ final class Collections extends BaseController
 
         $query = mb_substr(trim((string) $this->request->getGet('q')), 0, 150);
 
-        $selectedTermId = (string) $this->request->getGet('term');
-        $selectedTerm = null;
-        if ($selectedTermId !== '') {
-            $selectedTerm = $db->table('terms')
-                ->select('terms.id, terms.label')
-                ->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')
-                ->where('terms.id', $selectedTermId)
-                ->where('vocabularies.project_id', $collection['project_id'])
-                ->where('terms.is_active', true)
-                ->get()
-                ->getRowArray();
-            if (! $selectedTerm) {
-                $selectedTermId = '';
-            }
-        }
+        $keywordFilter = KeywordFilter::context($collection['project_id'], $id);
+        $selectedTermIds = $keywordFilter['selected'];
+        $selectedTerms = array_values(array_filter($keywordFilter['terms'], static fn ($term) => in_array($term['id'], $selectedTermIds, true)));
         $piecesBuilder = $db->table('pieces')
             ->select('pieces.*')
             ->join('piece_collections', 'piece_collections.piece_id = pieces.id')
             ->where('piece_collections.collection_id', $id);
-        if ($selectedTermId !== '') {
-            $piecesBuilder->join('piece_terms AS selected_piece_terms', 'selected_piece_terms.piece_id = pieces.id')
-                ->where('selected_piece_terms.term_id', $selectedTermId);
-        }
+        KeywordFilter::apply($piecesBuilder, $selectedTermIds);
         if ($query !== '') {
             $piecesBuilder
                 ->distinct()
@@ -109,39 +95,7 @@ final class Collections extends BaseController
                 ->groupEnd();
         }
         $pieces = $piecesBuilder->orderBy('pieces.title')->get()->getResultArray();
-        $keywordsByPiece = [];
-        if ($pieces !== []) {
-            $keywordRows = $db->table('piece_terms')
-                ->select('piece_terms.piece_id, terms.id, terms.label')
-                ->join('terms', 'terms.id = piece_terms.term_id')
-                ->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')
-                ->where('vocabularies.project_id', $collection['project_id'])
-                ->where('terms.is_active', true)
-                ->whereIn('piece_terms.piece_id', array_column($pieces, 'id'))
-                ->orderBy('terms.label')
-                ->get()
-                ->getResultArray();
-            foreach ($keywordRows as $row) {
-                $keywordsByPiece[$row['piece_id']][] = ['id' => $row['id'], 'label' => $row['label']];
-            }
-        }
-        foreach ($pieces as &$piece) {
-            $piece['keywords'] = $keywordsByPiece[$piece['id']] ?? [];
-            $piece['display_state'] = match (true) {
-                ($piece['access_condition'] ?? null) === 'restricted' => 'restricted',
-                ($piece['access_condition'] ?? null) === 'embargoed' => 'embargoed',
-                $piece['status'] === 'published' => 'published',
-                default => 'draft',
-            };
-            $piece['display_state_label'] = match ($piece['display_state']) {
-                'restricted' => 'Restrito',
-                'embargoed' => 'Embargado',
-                'published' => 'Publicado',
-                default => 'Draft',
-            };
-            $piece['display_state_locked'] = in_array($piece['display_state'], ['restricted', 'embargoed'], true);
-        }
-        unset($piece);
+        $pieces = \App\Libraries\PieceListing::decorate($pieces);
 
         return view('collections/show', [
             'title' => $collection['name'],
@@ -149,7 +103,9 @@ final class Collections extends BaseController
             'collection' => $collection,
             'viewMode' => $viewMode,
             'query' => $query,
-            'selectedTerm' => $selectedTerm,
+            'selectedTerms' => $selectedTerms,
+            'selectedTermIds' => $selectedTermIds,
+            'keywordFilter' => $keywordFilter,
             'pieces' => $pieces,
             'terms' => $db->table('terms')
                 ->select('terms.id, terms.label, vocabularies.name AS vocabulary_name')

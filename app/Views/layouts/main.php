@@ -59,6 +59,7 @@
             <span class="nav-disabled" aria-disabled="true" title="Selecione uma coleção para acessar as peças">Peças</span>
         <?php endif ?>
     </nav>
+    <?= view('components/keyword_summary', ['keywordFilter' => $keywordFilter ?? null, 'piece' => $piece ?? null, 'project' => $project ?? null, 'selectedCommunity' => $selectedCommunity, 'selectedCollection' => $selectedCollection, 'viewMode' => $viewMode ?? null, 'query' => $query ?? '']) ?>
 </aside>
 <?php endif ?>
 <main id="conteudo" class="content <?= esc($contentClass ?? '') ?> <?= session('user_id') ? '' : 'content-auth' ?>" tabindex="-1">

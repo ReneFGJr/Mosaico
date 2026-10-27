@@ -197,7 +197,8 @@ final class ImageDescriptionTest extends CIUnitTestCase
         $this->assertNotNull($audit);
         $this->assertStringNotContainsString('Ana', $audit['details']);
         $response = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste'])->get('/pecas/' . $this->piece['id']);
-        $response->assertSee('value="Ana &lt;teste&gt;"');
+        $response->assertSee('Ana &lt;teste&gt;</option>');
+        $response->assertSee('Autoridade da comunidade');
         $this->submitPeople('pessoas/nomes', ['detection_id' => $detectionId, 'names' => ['']])->assertRedirect();
         $this->assertSame([''], json_decode(db_connect()->table('piece_people_detections')->where('id', $detectionId)->get()->getRowArray()['manual_names'], true));
     }
@@ -296,5 +297,70 @@ final class ImageDescriptionTest extends CIUnitTestCase
             ->post('/pecas/' . $this->piece['id'] . '/nome', ['title' => 'Indevido', 'filename' => 'foto.png', 'source_file_id' => $this->fileId])->assertRedirect();
         $this->assertStringContainsString('formulário expirou', session('error'));
         $this->assertSame($this->piece['title'], db_connect()->table('pieces')->where('id', $this->piece['id'])->get()->getRowArray()['title']);
+    }
+
+    public function testCommunityAuthorityCanBeReusedAndNameVariantsDoNotDuplicateRecord(): void
+    {
+        $this->grantEditor();
+        $id = $this->seedPeopleDetection();
+        $this->submitPeople('pessoas/nomes', ['detection_id' => $id, 'names' => ['  Ana   Silva  ']])->assertRedirect();
+        $authority = db_connect()->table('person_authorities')->get()->getRowArray();
+        $this->assertSame('Ana Silva', $authority['preferred_name']);
+        $this->submitPeople('pessoas/nomes', ['detection_id' => $id, 'names' => ['ana silva']])->assertRedirect();
+        $this->assertSame(1, db_connect()->table('person_authorities')->countAllResults());
+        $this->submitPeople('pessoas/nomes', ['detection_id' => $id, 'names' => [''], 'authority_ids' => [$authority['id']]])->assertRedirect();
+        $link = db_connect()->table('piece_person_authorities')->where('detection_id', $id)->get()->getRowArray();
+        $this->assertSame($authority['id'], $link['authority_id']);
+        $this->assertSame(['Ana Silva'], json_decode(db_connect()->table('piece_people_detections')->where('id', $id)->get()->getRowArray()['manual_names'], true));
+        $page = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste'])->get('/pecas/' . $this->piece['id']);
+        $page->assertSee('value="' . $authority['id'] . '" selected');
+    }
+
+    public function testAuthoritySelectionRejectsAnotherCommunityAndConflictingInputs(): void
+    {
+        $this->grantEditor();
+        $id = $this->seedPeopleDetection();
+        $projects = new ProjectModel();
+        $projects->insert(['code' => 'OTHER', 'name' => 'Outra comunidade']);
+        $other = $projects->where('code', 'OTHER')->first();
+        $foreign = (new \App\Libraries\PersonAuthority())->resolve($other['id'], 'Nome de outra comunidade');
+        $this->submitPeople('pessoas/nomes', ['detection_id' => $id, 'names' => [''], 'authority_ids' => [$foreign['id']]])->assertRedirect();
+        $this->assertStringContainsString('da comunidade', session('error'));
+        $this->assertSame(0, db_connect()->table('piece_person_authorities')->countAllResults());
+        $local = (new \App\Libraries\PersonAuthority())->resolve($this->piece['project_id'], 'Nome local');
+        $this->submitPeople('pessoas/nomes', ['detection_id' => $id, 'names' => ['Outro nome'], 'authority_ids' => [$local['id']]])->assertRedirect();
+        $this->assertSame(0, db_connect()->table('piece_person_authorities')->countAllResults());
+        $page = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste'])->get('/pecas/' . $this->piece['id']);
+        $page->assertSee('Nome local');
+        $page->assertDontSee('Nome de outra comunidade');
+    }
+
+    public function testQualifierDistinguishesPeopleWithSameName(): void
+    {
+        $this->grantEditor();
+        $id = $this->seedPeopleDetection();
+        foreach (['Biblioteca', 'Arquivo'] as $qualifier) {
+            $this->submitPeople('pessoas/nomes', ['detection_id' => $id, 'names' => ['Ana Silva'], 'qualifiers' => [$qualifier]])->assertRedirect();
+        }
+        $this->assertSame(2, db_connect()->table('person_authorities')->where('project_id', $this->piece['project_id'])->countAllResults());
+        $this->assertSame(1, db_connect()->table('piece_person_authorities')->where('detection_id', $id)->countAllResults());
+        $page = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste'])->get('/pecas/' . $this->piece['id']);
+        $page->assertSee('Ana Silva — Biblioteca');
+        $page->assertSee('Ana Silva — Arquivo');
+    }
+
+    public function testExistingManualAssociationsAreMigratedToCommunityAuthority(): void
+    {
+        $id = $this->seedPeopleDetection();
+        db_connect()->table('piece_people_detections')->where('id', $id)->update(['manual_names' => '["Ana Silva"]']);
+        $migration = new \App\Database\Migrations\CreatePersonAuthorities();
+        $migration->down();
+        $migration->up();
+        $authority = db_connect()->table('person_authorities')->get()->getRowArray();
+        $link = db_connect()->table('piece_person_authorities')->where('detection_id', $id)->get()->getRowArray();
+        $this->assertSame($this->piece['project_id'], $authority['project_id']);
+        $this->assertSame('Ana Silva', $authority['preferred_name']);
+        $this->assertSame($authority['id'], $link['authority_id']);
+        $this->assertSame('["Ana Silva"]', db_connect()->table('piece_people_detections')->where('id', $id)->get()->getRowArray()['manual_names']);
     }
 }

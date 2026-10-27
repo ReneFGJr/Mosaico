@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Libraries\AuditLogger;
 use App\Libraries\PieceThumbnail;
 use App\Libraries\ProjectAccess;
+use App\Libraries\PersonAuthority;
+use App\Libraries\KeywordFilter;
 use App\Libraries\RangeFileResponse;
 use App\Models\PieceModel;
 use App\Models\UuidModel;
@@ -26,7 +28,25 @@ final class Pieces extends BaseController
         if ($query !== '') {
             $builder->groupStart()->like('pieces.title', $query)->orLike('pieces.code', $query)->orLike('pieces.summary', $query)->groupEnd();
         }
-        return view('pieces/index', ['title' => 'Peças', 'pieces' => $builder->orderBy('pieces.updated_at', 'DESC')->get()->getResultArray(), 'query' => $query, 'collection' => $collection]);
+        $projectId = $this->request->getGet('project');
+        $project = is_string($projectId) ? db_connect()->table('projects')->where('id', $projectId)->where('status !=', 'excluded')->get()->getRowArray() : null;
+        $keywordFilter = $project ? KeywordFilter::context($project['id']) : null;
+        if ($project) {
+            $builder->where('pieces.project_id', $project['id']);
+            KeywordFilter::apply($builder, $keywordFilter['selected']);
+        }
+        $allowedViews = ['list', 'details', 'thumbnail', 'cards'];
+        $requestedView = $this->request->getGet('view');
+        if (is_string($requestedView) && in_array($requestedView, $allowedViews, true)) {
+            $viewMode = $requestedView;
+            $this->response->setCookie('mosaico_collection_view', $viewMode, 60 * 60 * 24 * 365, '', '/', '', $this->request->isSecure(), true, 'Lax');
+        } else {
+            $savedView = $this->request->getCookie('mosaico_collection_view');
+            $viewMode = in_array($savedView, $allowedViews, true) ? $savedView : 'thumbnail';
+        }
+        $pieces = \App\Libraries\PieceListing::decorate($builder->orderBy('pieces.title')->get()->getResultArray());
+        return view('pieces/index', ['title' => 'Peças', 'contentClass' => 'content-wide', 'pieces' => $pieces,
+            'query' => $query, 'collection' => $collection, 'project' => $project, 'keywordFilter' => $keywordFilter, 'viewMode' => $viewMode]);
     }
 
     public function create()
@@ -74,6 +94,16 @@ final class Pieces extends BaseController
             ->get()
             ->getResultArray();
         $selectedTermIds = array_column($db->table('piece_terms')->select('term_id')->where('piece_id', $id)->get()->getResultArray(), 'term_id');
+        $peopleDetection = $previewFile ? $this->latestPeopleDetection($id, $previewFile['id']) : null;
+        $personAuthorityLinks = [];
+        if ($peopleDetection) {
+            $links = $db->table('piece_person_authorities AS links')->select('links.person_index, person_authorities.id, person_authorities.preferred_name, person_authorities.qualifier')
+                ->join('person_authorities', 'person_authorities.id = links.authority_id')->where('links.detection_id', $peopleDetection['id'])
+                ->where('person_authorities.project_id', $projectId)->get()->getResultArray();
+            foreach ($links as $link) {
+                $personAuthorityLinks[$link['person_index']] = $link;
+            }
+        }
 
         return view('pieces/show', [
             'title' => $piece['title'],
@@ -84,7 +114,9 @@ final class Pieces extends BaseController
             'previewFile' => $previewFile,
             'previewType' => $this->previewType((string) ($previewFile['mime_type'] ?? '')),
             'imageDescription' => $previewFile ? $db->table('piece_image_descriptions')->where('piece_id', $id)->where('source_file_id', $previewFile['id'])->get()->getRowArray() : null,
-            'peopleDetection' => $previewFile ? $this->latestPeopleDetection($id, $previewFile['id']) : null,
+            'peopleDetection' => $peopleDetection,
+            'personAuthorityLinks' => $personAuthorityLinks,
+            'personAuthorities' => $this->canManage($projectId) ? $db->table('person_authorities')->where('project_id', $projectId)->orderBy('preferred_name')->orderBy('qualifier')->get()->getResultArray() : [],
             'vocabularies' => $vocabularies,
             'terms' => $terms,
             'selectedTermIds' => $selectedTermIds,
@@ -273,20 +305,51 @@ final class Pieces extends BaseController
             return redirect()->to('/pecas/' . $id)->with('error', 'Revise os nomes associados às pessoas desta análise.');
         }
         $names = [];
+        $chosenAuthorities = [];
+        $submittedAuthorities = (array) $this->request->getPost('authority_ids');
+        $qualifiers = (array) $this->request->getPost('qualifiers');
+        $projectId = (string) db_connect()->table('pieces')->select('project_id')->where('id', $id)->get()->getRowArray()['project_id'];
         foreach ($result['people'] as $index => $person) {
             $name = $submitted[$index] ?? null;
             if (! is_string($name) || mb_strlen(trim($name)) > 190 || preg_match('/[\x00-\x1F\x7F]/u', $name)) {
                 return redirect()->to('/pecas/' . $id)->with('error', 'Informe nomes de até 190 caracteres, sem quebras de linha.');
             }
             $names[$index] = trim($name);
+            $authorityId = $submittedAuthorities[$index] ?? '';
+            $qualifier = $qualifiers[$index] ?? '';
+            if (! is_string($authorityId) || ! is_string($qualifier) || mb_strlen(trim($qualifier)) > 190 || preg_match('/[\x00-\x1F\x7F]/u', $qualifier)) {
+                return redirect()->to('/pecas/' . $id)->with('error', 'Revise o registro de autoridade e o qualificador informado.');
+            }
+            if ($authorityId !== '') {
+                $authority = db_connect()->table('person_authorities')->where('id', $authorityId)->where('project_id', $projectId)->get()->getRowArray();
+                if (! $authority || $names[$index] !== '' || trim($qualifier) !== '') {
+                    return redirect()->to('/pecas/' . $id)->with('error', 'Selecione uma pessoa da comunidade ou cadastre um novo nome, usando apenas uma opção.');
+                }
+                $names[$index] = $authority['preferred_name'];
+                $chosenAuthorities[$index] = $authority;
+            } elseif ($names[$index] !== '') {
+                $chosenAuthorities[$index] = ['name' => $names[$index], 'qualifier' => trim($qualifier)];
+            } elseif (trim($qualifier) !== '') {
+                return redirect()->to('/pecas/' . $id)->with('error', 'Informe o nome antes de preencher o qualificador.');
+            }
         }
         $db = db_connect();
         $db->transStart();
+        $db->table('piece_person_authorities')->where('detection_id', $detection['id'])->delete();
+        $authorityIds = [];
+        foreach ($chosenAuthorities as $index => $authority) {
+            if (! isset($authority['id'])) {
+                $authority = (new PersonAuthority())->resolve($projectId, $authority['name'], $authority['qualifier']);
+                $names[$index] = $authority['preferred_name'];
+            }
+            $authorityIds[] = $authority['id'];
+            $db->table('piece_person_authorities')->insert(['detection_id' => $detection['id'], 'person_index' => $index, 'authority_id' => $authority['id']]);
+        }
         $db->table('piece_people_detections')->where('id', $detection['id'])->update([
             'manual_names' => json_encode($names, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             'names_updated_by' => session('user_id'), 'names_updated_at' => date('Y-m-d H:i:s'),
         ]);
-        (new AuditLogger())->record('piece.people_names_updated', 'piece', $id, ['detection_id' => $detection['id']]);
+        (new AuditLogger())->record('piece.people_names_updated', 'piece', $id, ['detection_id' => $detection['id'], 'authority_ids' => $authorityIds]);
         $db->transComplete();
 
         return redirect()->to('/pecas/' . $id)->with($db->transStatus() ? 'success' : 'error', $db->transStatus()

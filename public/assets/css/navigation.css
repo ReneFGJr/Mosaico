@@ -32,3 +32,13 @@
     font-weight: 600;
     opacity: .75;
 }
+.sidebar { overflow-y: auto; }
+.sidebar-keywords { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--soft); }
+.sidebar-keywords h2 { margin: 0 0 .75rem; font-size: 1rem; }
+.sidebar-keywords p { font-size: .8rem; color: var(--muted); }
+.sidebar-keywords fieldset { min-width: 0; border: 0; padding: 0; margin: 0 0 1rem; }
+.sidebar-keywords legend { font-size: .85rem; font-weight: 700; margin-bottom: .5rem; overflow-wrap: anywhere; }
+.sidebar-keywords label { display: flex; align-items: flex-start; gap: .5rem; padding: .4rem 0; font-weight: 400; font-size: .9rem; overflow-wrap: anywhere; }
+.sidebar-keywords input[type="checkbox"] { width: 1rem; height: 1rem; flex-shrink: 0; margin: .15rem 0 0; }
+.sidebar-keywords .button { width: 100%; font-size: .85rem; }
+.keyword-clear { display: block; text-align: center; margin-top: .7rem; font-size: .85rem; }
