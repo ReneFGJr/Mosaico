@@ -437,6 +437,12 @@ final class MosaicoWebTest extends CIUnitTestCase
 
         $response->assertRedirectTo('/colecoes/' . $collection['id']);
 
+        $role = db_connect()->table('roles')->where('code', 'administrator')->get()->getRowArray();
+        db_connect()->table('memberships')->insert([
+            'project_id' => $community['id'],
+            'user_id' => '00000000-0000-4000-8000-000000000001',
+            'role_id' => $role['id'],
+        ]);
         $collectionResponse = $this->withSession(['user_id' => '00000000-0000-4000-8000-000000000001', 'user_name' => 'Pessoa teste'])
             ->get('/colecoes/' . $collection['id']);
         $collectionResponse->assertStatus(200);
