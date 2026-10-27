@@ -88,6 +88,29 @@ final class Pieces extends BaseController
         }
         $assets = $db->table('assets AS piece_assets')->select('piece_assets.*, COUNT(versions.version_number) AS version_count, MAX(versions.version_number) AS latest_version')->join('asset_versions AS versions', 'versions.asset_id = piece_assets.id', 'left')->where('piece_assets.piece_id', $id)->groupBy('piece_assets.id')->orderBy('piece_assets.created_at', 'DESC')->get()->getResultArray();
         $pieceCollection = $db->table('piece_collections')->select('collection_id')->join('collections', 'collections.id = piece_collections.collection_id')->where('collections.deleted_at', null)->where('piece_id', $id)->get()->getRowArray();
+        $requestedCollection = (string) ($this->request->getGet('collection') ?? $this->request->getCookie('mosaico_selected_collection'));
+        if ($requestedCollection !== '') {
+            $contextCollection = $db->table('piece_collections')->select('collection_id')
+                ->join('collections', 'collections.id = piece_collections.collection_id')
+                ->where('collections.deleted_at', null)->where('piece_id', $id)
+                ->where('collection_id', $requestedCollection)->get()->getRowArray();
+            $pieceCollection = $contextCollection ?? $pieceCollection;
+        }
+        $neighborUrls = [];
+        foreach (['previous' => '<', 'next' => '>'] as $direction => $operator) {
+            $builder = $db->table('pieces')->select('pieces.id')->where('pieces.project_id', $piece['project_id']);
+            if ($pieceCollection) {
+                $builder->join('piece_collections', 'piece_collections.piece_id = pieces.id')
+                    ->where('piece_collections.collection_id', $pieceCollection['collection_id']);
+            }
+            $order = $direction === 'previous' ? 'DESC' : 'ASC';
+            $neighbor = $builder->groupStart()->where('pieces.title ' . $operator, $piece['title'])
+                ->orGroupStart()->where('pieces.title', $piece['title'])->where('pieces.id ' . $operator, $id)
+                ->groupEnd()->groupEnd()->orderBy('pieces.title', $order)->orderBy('pieces.id', $order)
+                ->limit(1)->get()->getRowArray();
+            $neighborUrls[$direction] = $neighbor ? site_url('pecas/' . $neighbor['id'])
+                . ($pieceCollection ? '?' . http_build_query(['collection' => $pieceCollection['collection_id']]) : '') : null;
+        }
         $previewFile = $this->findPreviewFile($id);
         $projectId = (string) $piece['project_id'];
         $vocabularies = $db->table('vocabularies')->where('project_id', $projectId)->orderBy('name')->get()->getResultArray();
@@ -116,6 +139,7 @@ final class Pieces extends BaseController
             'title' => $piece['title'],
             'contentClass' => 'content-wide',
             'piece' => $piece,
+            'neighborUrls' => $neighborUrls,
             'assets' => $assets,
             'backUrl' => $pieceCollection ? site_url('colecoes/' . $pieceCollection['collection_id']) : site_url('pecas'),
             'previewFile' => $previewFile,
@@ -171,12 +195,16 @@ final class Pieces extends BaseController
 
     public function keywords(string $id)
     {
+        $autosave = $this->request->isAJAX() && $this->request->getPost('autosave') === '1';
         $db = db_connect();
         $piece = $db->table('pieces')->select('id, project_id')->where('id', $id)->get()->getRowArray();
         if (! $piece) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
         if (! $this->canManage((string) $piece['project_id'])) {
+            if ($autosave) {
+                return $this->response->setStatusCode(403)->setJSON(['message' => 'Você não tem permissão para alterar as palavras-chave.', 'csrfName' => csrf_token(), 'csrfHash' => csrf_hash()]);
+            }
             return redirect()->to('/pecas/' . $id)->with('error', 'Você não tem permissão para alterar as palavras-chave desta peça.');
         }
 
@@ -192,8 +220,8 @@ final class Pieces extends BaseController
                 ->getResultArray(),
             'id',
         );
-        $categoryName = trim((string) $this->request->getPost('new_category'));
-        $keywordLabel = trim((string) $this->request->getPost('new_keyword'));
+        $categoryName = $autosave ? '' : trim((string) $this->request->getPost('new_category'));
+        $keywordLabel = $autosave ? '' : trim((string) $this->request->getPost('new_keyword'));
         if (mb_strlen($categoryName) > 190 || mb_strlen($keywordLabel) > 190) {
             return redirect()->to('/pecas/' . $id)->with('error', 'Categoria e palavra-chave devem possuir no máximo 190 caracteres.');
         }
@@ -202,7 +230,7 @@ final class Pieces extends BaseController
         }
 
         $db->transStart();
-        $categoryId = $this->resolveCategory((string) $this->request->getPost('vocabulary_id'), $categoryName, (string) $piece['project_id']);
+        $categoryId = $autosave ? null : $this->resolveCategory((string) $this->request->getPost('vocabulary_id'), $categoryName, (string) $piece['project_id']);
         if ($keywordLabel !== '') {
             $categoryId ??= $this->defaultKeywordCategory((string) $piece['project_id']);
             $validIds[] = $this->resolveKeyword($categoryId, $keywordLabel);
@@ -216,6 +244,12 @@ final class Pieces extends BaseController
         (new AuditLogger())->record('piece.keywords_updated', 'piece', $id, ['term_ids' => $validIds]);
         $db->transComplete();
 
+        if ($autosave) {
+            return $this->response->setStatusCode($db->transStatus() ? 200 : 500)->setJSON([
+                'message' => $db->transStatus() ? 'Palavras-chave atualizadas.' : 'Não foi possível atualizar as palavras-chave.',
+                'csrfName' => csrf_token(), 'csrfHash' => csrf_hash(),
+            ]);
+        }
         if (! $db->transStatus()) {
             return redirect()->to('/pecas/' . $id)->with('error', 'Não foi possível atualizar as palavras-chave.');
         }

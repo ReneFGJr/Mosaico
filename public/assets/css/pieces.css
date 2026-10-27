@@ -91,6 +91,14 @@
     width: auto;
 }
 
+.keyword-create > summary {
+    list-style: none;
+}
+
+.keyword-create > summary::-webkit-details-marker { display: none; }
+.keyword-create[open] > summary { margin-bottom: 1rem; }
+.keyword-create .form-help { margin: 1rem 0; }
+
 .new-keyword-fields {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

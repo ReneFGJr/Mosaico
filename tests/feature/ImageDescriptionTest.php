@@ -75,6 +75,54 @@ final class ImageDescriptionTest extends CIUnitTestCase
         return $detectionId;
     }
 
+    public function testPreviousAndNextStayWithinCollectionAndDisableAtBoundary(): void
+    {
+        $collectionId = (new \App\Models\CollectionModel())->insert([
+            'project_id' => $this->piece['project_id'], 'code' => 'NAV', 'name' => 'Navigation',
+        ]);
+        $db = db_connect();
+        $db->table('piece_collections')->insert(['piece_id' => $this->piece['id'], 'collection_id' => $collectionId]);
+        $nextId = (new PieceModel())->insert([
+            'project_id' => $this->piece['project_id'], 'code' => 'NEXT', 'title' => 'Zebra', 'type' => 'image',
+        ]);
+        $db->table('piece_collections')->insert(['piece_id' => $nextId, 'collection_id' => $collectionId]);
+        (new PieceModel())->insert([
+            'project_id' => $this->piece['project_id'], 'code' => 'OUT', 'title' => 'Outra peça', 'type' => 'image',
+        ]);
+        $response = $this->withSession(['user_id' => $this->userId])->get('/pecas/' . $this->piece['id']);
+        $response->assertStatus(200);
+        $response->assertSee('/pecas/' . $nextId . '?collection=' . $collectionId);
+        $response->assertSee('disabled aria-label="Anterior"');
+        $response = $this->withSession(['user_id' => $this->userId])->get('/pecas/' . $nextId . '?collection=' . $collectionId);
+        $response->assertStatus(200);
+        $response->assertSee('/pecas/' . $this->piece['id'] . '?collection=' . $collectionId);
+        $response->assertSee('disabled aria-label="Próximo"');
+    }
+
+    public function testKeywordAutosaveAddsAndRemovesWithoutCreatingTypedKeyword(): void
+    {
+        $this->grantEditor();
+        $categoryId = (new \App\Models\VocabularyModel())->insert([
+            'project_id' => $this->piece['project_id'], 'code' => 'AUTO', 'name' => 'Autosave',
+        ]);
+        $termId = (new \App\Models\TermModel())->insert([
+            'vocabulary_id' => $categoryId, 'code' => 'AUTO', 'label' => 'Autosave term',
+        ]);
+        foreach ([[$termId], []] as $selected) {
+            $token = csrf_hash();
+            $response = $this->withSession(['user_id' => $this->userId])
+                ->withHeaders(['Cookie' => 'csrf_cookie_name=' . $token, 'X-Requested-With' => 'XMLHttpRequest'])
+                ->post('/pecas/' . $this->piece['id'] . '/palavras-chave', [
+                    'csrf_test_name' => $token, 'autosave' => '1', 'term_ids' => $selected,
+                    'new_keyword' => 'Do not create',
+                ]);
+            $response->assertStatus(200);
+            $this->assertNotEmpty(json_decode($response->getJSON(), true)['csrfHash']);
+            $this->assertSame(count($selected), db_connect()->table('piece_terms')->where('piece_id', $this->piece['id'])->countAllResults());
+        }
+        $this->assertSame(0, db_connect()->table('terms')->where('label', 'Do not create')->countAllResults());
+    }
+
     public function testRequiresAuthenticationAndEditPermission(): void
     {
         $this->post('/pecas/' . $this->piece['id'] . '/descrever-imagem')->assertRedirectTo('/login');
