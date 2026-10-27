@@ -9,3 +9,75 @@ Collection Actions
  [x] Renamed identical photo explains which existing file was restored
  [x] Sidebar keywords combine filters and preserve view and search
 
+Example Database
+ [x] Model find all
+ [x] Soft delete leaves row
+
+Example Session
+ [x] Session simple
+
+Health
+ [x] Is defined app path
+ [x] Base url has been set
+
+Image Description
+ [x] Requires authentication and edit permission
+ [x] Generates persists and escapes description without changing summary
+ [x] Rejects stale file and non image before calling ollama
+ [x] Remote failure preserves previous description
+ [x] Invalid csrf cannot generate description
+ [x] Description belongs to displayed file and generation requires permission
+ [x] People detection persists and renders visible attributes
+ [x] Manual names are saved without calling ollama or logging names
+ [x] People actions require permission and csrf
+ [x] Names reject stale analysis and invalid values
+ [x] New detection keeps previous manual associations and does not transfer names
+ [x] Can rename piece and displayed filename while preserving original file
+ [x] Rename validates filename and rejects stale file
+ [x] Rename requires permission and csrf
+ [x] Community authority can be reused and name variants do not duplicate record
+ [x] Authority selection rejects another community and conflicting inputs
+ [x] Qualifier distinguishes people with same name
+ [x] Existing manual associations are migrated to community authority
+
+Mosaico Foundation
+ [x] Admin user seeder uses configured password and is idempotent
+ [x] Piece has stable identity and unique project code
+ [x] Controlled term can be assigned to piece
+ [x] Project permissions are scoped and denied by default
+
+Mosaico Web
+ [x] Login page is public
+ [x] Profile requires authentication
+ [x] Profile shows account and first name menu without password hash
+ [x] Profile lists only membership communities and their active collections
+ [x] Password change validates and updates only current account
+ [ ] Expired session is destroyed before protected request
+ [x] Logout with expired session does not write audit event for missing user
+ [x] Dashboard redirects anonymous visitor to login
+ [x] Expired session on protected post redirects to login before csrf validation
+ [x] Oversized upload is rejected before csrf with friendly message
+ [x] Invalid csrf redirects back without technical exception
+ [ ] Authenticated user can see dashboard
+ [x] Repository core tables exist
+ [ ] Community list offers community selection
+ [x] New collection form accepts a representative image
+ [x] Authenticated user can create community and be assigned as administrator
+ [x] Keywords cannot be shared across communities
+ [ ] Community details offers management actions
+ [ ] Collection pieces page only shows linked pieces
+
+Ollama Image Describer
+ [x] Sends image bytes and parses description
+ [x] Rejects path outside repository before network request
+ [x] Rejects invalid and incomplete remote responses
+ [x] Network failure does not expose connection details
+ [x] Rejects invalid image before network request
+ [x] People detection uses schema and only returns visible attributes
+ [x] People detection accepts zero and unknown count
+ [x] People detection rejects malformed results
+
+Range File Response
+ [x] Streams file without loading it into response body
+ [x] Streams requested byte range
+

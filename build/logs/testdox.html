@@ -63,5 +63,85 @@
             <li class="success">Renamed identical photo explains which existing file was restored</li>
             <li class="success">Sidebar keywords combine filters and preserve view and search</li>
         </ul>
+        <h2>Example Database</h2>
+        <ul>
+            <li class="success">Model find all</li>
+            <li class="success">Soft delete leaves row</li>
+        </ul>
+        <h2>Example Session</h2>
+        <ul>
+            <li class="success">Session simple</li>
+        </ul>
+        <h2>Health</h2>
+        <ul>
+            <li class="success">Is defined app path</li>
+            <li class="success">Base url has been set</li>
+        </ul>
+        <h2>Image Description</h2>
+        <ul>
+            <li class="success">Requires authentication and edit permission</li>
+            <li class="success">Generates persists and escapes description without changing summary</li>
+            <li class="success">Rejects stale file and non image before calling ollama</li>
+            <li class="success">Remote failure preserves previous description</li>
+            <li class="success">Invalid csrf cannot generate description</li>
+            <li class="success">Description belongs to displayed file and generation requires permission</li>
+            <li class="success">People detection persists and renders visible attributes</li>
+            <li class="success">Manual names are saved without calling ollama or logging names</li>
+            <li class="success">People actions require permission and csrf</li>
+            <li class="success">Names reject stale analysis and invalid values</li>
+            <li class="success">New detection keeps previous manual associations and does not transfer names</li>
+            <li class="success">Can rename piece and displayed filename while preserving original file</li>
+            <li class="success">Rename validates filename and rejects stale file</li>
+            <li class="success">Rename requires permission and csrf</li>
+            <li class="success">Community authority can be reused and name variants do not duplicate record</li>
+            <li class="success">Authority selection rejects another community and conflicting inputs</li>
+            <li class="success">Qualifier distinguishes people with same name</li>
+            <li class="success">Existing manual associations are migrated to community authority</li>
+        </ul>
+        <h2>Mosaico Foundation</h2>
+        <ul>
+            <li class="success">Admin user seeder uses configured password and is idempotent</li>
+            <li class="success">Piece has stable identity and unique project code</li>
+            <li class="success">Controlled term can be assigned to piece</li>
+            <li class="success">Project permissions are scoped and denied by default</li>
+        </ul>
+        <h2>Mosaico Web</h2>
+        <ul>
+            <li class="success">Login page is public</li>
+            <li class="success">Profile requires authentication</li>
+            <li class="success">Profile shows account and first name menu without password hash</li>
+            <li class="success">Profile lists only membership communities and their active collections</li>
+            <li class="success">Password change validates and updates only current account</li>
+            <li class="defect">Expired session is destroyed before protected request</li>
+            <li class="success">Logout with expired session does not write audit event for missing user</li>
+            <li class="success">Dashboard redirects anonymous visitor to login</li>
+            <li class="success">Expired session on protected post redirects to login before csrf validation</li>
+            <li class="success">Oversized upload is rejected before csrf with friendly message</li>
+            <li class="success">Invalid csrf redirects back without technical exception</li>
+            <li class="defect">Authenticated user can see dashboard</li>
+            <li class="success">Repository core tables exist</li>
+            <li class="defect">Community list offers community selection</li>
+            <li class="success">New collection form accepts a representative image</li>
+            <li class="success">Authenticated user can create community and be assigned as administrator</li>
+            <li class="success">Keywords cannot be shared across communities</li>
+            <li class="defect">Community details offers management actions</li>
+            <li class="defect">Collection pieces page only shows linked pieces</li>
+        </ul>
+        <h2>Ollama Image Describer</h2>
+        <ul>
+            <li class="success">Sends image bytes and parses description</li>
+            <li class="success">Rejects path outside repository before network request</li>
+            <li class="success">Rejects invalid and incomplete remote responses</li>
+            <li class="success">Network failure does not expose connection details</li>
+            <li class="success">Rejects invalid image before network request</li>
+            <li class="success">People detection uses schema and only returns visible attributes</li>
+            <li class="success">People detection accepts zero and unknown count</li>
+            <li class="success">People detection rejects malformed results</li>
+        </ul>
+        <h2>Range File Response</h2>
+        <ul>
+            <li class="success">Streams file without loading it into response body</li>
+            <li class="success">Streams requested byte range</li>
+        </ul>
     </body>
 </html>

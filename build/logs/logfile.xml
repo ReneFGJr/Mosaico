@@ -1,17 +1,122 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite name="D:\www\Mosaico\phpunit.dist.xml" tests="9" assertions="131" errors="0" failures="0" skipped="0" time="0.880406">
-    <testsuite name="App" tests="9" assertions="131" errors="0" failures="0" skipped="0" time="0.880406">
-      <testsuite name="CollectionActionsTest" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" tests="9" assertions="131" errors="0" failures="0" skipped="0" time="0.880406">
-        <testcase name="testMembersCanBeManagedOnlyByCommunityManagers" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="49" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="11" time="0.127022"/>
-        <testcase name="testCollectionMembersCannotPublishOrManageMembers" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="65" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="8" time="0.068223"/>
-        <testcase name="testCardsOfferCollectionActionsAndForms" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="76" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="10" time="0.112598"/>
-        <testcase name="testEditPreservesCollectionIdentity" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="90" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="6" time="0.059013"/>
-        <testcase name="testDeleteRequiresConfirmationAndPreservesData" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="101" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="17" time="0.105150"/>
-        <testcase name="testActionsRequirePermissionAndDoNotAcceptMissingImage" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="134" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="10" time="0.076783"/>
-        <testcase name="testDeleteCannotBypassCsrfWithConfirmation" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="146" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="3" time="0.064937"/>
-        <testcase name="testRenamedIdenticalPhotoExplainsWhichExistingFileWasRestored" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="156" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="12" time="0.085078"/>
-        <testcase name="testSidebarKeywordsCombineFiltersAndPreserveViewAndSearch" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="204" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="54" time="0.181603"/>
+  <testsuite name="D:\www\Mosaico\phpunit.dist.xml" tests="65" assertions="475" errors="0" failures="5" skipped="0" time="9.295116">
+    <testsuite name="App" tests="65" assertions="475" errors="0" failures="5" skipped="0" time="9.295116">
+      <testsuite name="ExampleDatabaseTest" file="D:\www\Mosaico\tests\database\ExampleDatabaseTest.php" tests="2" assertions="3" errors="0" failures="0" skipped="0" time="0.057812">
+        <testcase name="testModelFindAll" file="D:\www\Mosaico\tests\database\ExampleDatabaseTest.php" line="17" class="ExampleDatabaseTest" classname="ExampleDatabaseTest" assertions="1" time="0.044909"/>
+        <testcase name="testSoftDeleteLeavesRow" file="D:\www\Mosaico\tests\database\ExampleDatabaseTest.php" line="28" class="ExampleDatabaseTest" classname="ExampleDatabaseTest" assertions="2" time="0.012903"/>
+      </testsuite>
+      <testsuite name="MosaicoFoundationTest" file="D:\www\Mosaico\tests\database\MosaicoFoundationTest.php" tests="4" assertions="14" errors="0" failures="0" skipped="0" time="0.356973">
+        <testcase name="testAdminUserSeederUsesConfiguredPasswordAndIsIdempotent" file="D:\www\Mosaico\tests\database\MosaicoFoundationTest.php" line="23" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="5" time="0.131110"/>
+        <testcase name="testPieceHasStableIdentityAndUniqueProjectCode" file="D:\www\Mosaico\tests\database\MosaicoFoundationTest.php" line="56" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="4" time="0.068117"/>
+        <testcase name="testControlledTermCanBeAssignedToPiece" file="D:\www\Mosaico\tests\database\MosaicoFoundationTest.php" line="90" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="1" time="0.058613"/>
+        <testcase name="testProjectPermissionsAreScopedAndDeniedByDefault" file="D:\www\Mosaico\tests\database\MosaicoFoundationTest.php" line="128" class="MosaicoFoundationTest" classname="MosaicoFoundationTest" assertions="4" time="0.099133"/>
+      </testsuite>
+      <testsuite name="CollectionActionsTest" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" tests="9" assertions="131" errors="0" failures="0" skipped="0" time="0.810244">
+        <testcase name="testMembersCanBeManagedOnlyByCommunityManagers" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="49" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="11" time="0.093108"/>
+        <testcase name="testCollectionMembersCannotPublishOrManageMembers" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="65" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="8" time="0.074202"/>
+        <testcase name="testCardsOfferCollectionActionsAndForms" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="76" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="10" time="0.091913"/>
+        <testcase name="testEditPreservesCollectionIdentity" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="90" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="6" time="0.055852"/>
+        <testcase name="testDeleteRequiresConfirmationAndPreservesData" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="101" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="17" time="0.096712"/>
+        <testcase name="testActionsRequirePermissionAndDoNotAcceptMissingImage" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="134" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="10" time="0.066597"/>
+        <testcase name="testDeleteCannotBypassCsrfWithConfirmation" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="146" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="3" time="0.059679"/>
+        <testcase name="testRenamedIdenticalPhotoExplainsWhichExistingFileWasRestored" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="156" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="12" time="0.098850"/>
+        <testcase name="testSidebarKeywordsCombineFiltersAndPreserveViewAndSearch" file="D:\www\Mosaico\tests\feature\CollectionActionsTest.php" line="204" class="CollectionActionsTest" classname="CollectionActionsTest" assertions="54" time="0.173331"/>
+      </testsuite>
+      <testsuite name="ImageDescriptionTest" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" tests="18" assertions="152" errors="0" failures="0" skipped="0" time="1.347830">
+        <testcase name="testRequiresAuthenticationAndEditPermission" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="78" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="7" time="0.077359"/>
+        <testcase name="testGeneratesPersistsAndEscapesDescriptionWithoutChangingSummary" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="89" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="11" time="0.081448"/>
+        <testcase name="testRejectsStaleFileAndNonImageBeforeCallingOllama" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="109" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="5" time="0.070807"/>
+        <testcase name="testRemoteFailurePreservesPreviousDescription" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="122" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="3" time="0.063673"/>
+        <testcase name="testInvalidCsrfCannotGenerateDescription" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="135" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="4" time="0.062710"/>
+        <testcase name="testDescriptionBelongsToDisplayedFileAndGenerationRequiresPermission" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="148" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="4" time="0.085602"/>
+        <testcase name="testPeopleDetectionPersistsAndRendersVisibleAttributes" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="162" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="12" time="0.087012"/>
+        <testcase name="testManualNamesAreSavedWithoutCallingOllamaOrLoggingNames" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="185" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="10" time="0.075724"/>
+        <testcase name="testPeopleActionsRequirePermissionAndCsrf" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="206" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="10" time="0.066683"/>
+        <testcase name="testNamesRejectStaleAnalysisAndInvalidValues" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="225" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="15" time="0.078345"/>
+        <testcase name="testNewDetectionKeepsPreviousManualAssociationsAndDoesNotTransferNames" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="242" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="7" time="0.072957"/>
+        <testcase name="testCanRenamePieceAndDisplayedFilenameWhilePreservingOriginalFile" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="260" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="9" time="0.074095"/>
+        <testcase name="testRenameValidatesFilenameAndRejectsStaleFile" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="276" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="25" time="0.094319"/>
+        <testcase name="testRenameRequiresPermissionAndCsrf" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="290" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="5" time="0.068409"/>
+        <testcase name="testCommunityAuthorityCanBeReusedAndNameVariantsDoNotDuplicateRecord" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="302" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="8" time="0.083658"/>
+        <testcase name="testAuthoritySelectionRejectsAnotherCommunityAndConflictingInputs" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="319" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="7" time="0.076072"/>
+        <testcase name="testQualifierDistinguishesPeopleWithSameName" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="338" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="6" time="0.074090"/>
+        <testcase name="testExistingManualAssociationsAreMigratedToCommunityAuthority" file="D:\www\Mosaico\tests\feature\ImageDescriptionTest.php" line="352" class="ImageDescriptionTest" classname="ImageDescriptionTest" assertions="4" time="0.054866"/>
+      </testsuite>
+      <testsuite name="MosaicoWebTest" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" tests="19" assertions="120" errors="0" failures="5" skipped="0" time="2.781585">
+        <testcase name="testLoginPageIsPublic" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="34" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.102854"/>
+        <testcase name="testProfileRequiresAuthentication" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="41" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="4" time="0.108165"/>
+        <testcase name="testProfileShowsAccountAndFirstNameMenuWithoutPasswordHash" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="47" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="6" time="0.108624"/>
+        <testcase name="testProfileListsOnlyMembershipCommunitiesAndTheirActiveCollections" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="62" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="6" time="0.107408"/>
+        <testcase name="testPasswordChangeValidatesAndUpdatesOnlyCurrentAccount" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="99" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="21" time="0.888404"/>
+        <testcase name="testExpiredSessionIsDestroyedBeforeProtectedRequest" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="142" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="3" time="0.104300">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">MosaicoWebTest::testExpiredSessionIsDestroyedBeforeProtectedRequest&#13;
+Failed asserting that '00000000-0000-4000-8000-000000000099' is null.
+&#13;
+D:\www\Mosaico\tests\feature\MosaicoWebTest.php:150</failure>
+        </testcase>
+        <testcase name="testLogoutWithExpiredSessionDoesNotWriteAuditEventForMissingUser" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="153" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="3" time="0.096951"/>
+        <testcase name="testDashboardRedirectsAnonymousVisitorToLogin" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="164" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.096243"/>
+        <testcase name="testExpiredSessionOnProtectedPostRedirectsToLoginBeforeCsrfValidation" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="169" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.096234"/>
+        <testcase name="testOversizedUploadIsRejectedBeforeCsrfWithFriendlyMessage" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="176" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.098069"/>
+        <testcase name="testInvalidCsrfRedirectsBackWithoutTechnicalException" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="192" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="2" time="0.096887"/>
+        <testcase name="testAuthenticatedUserCanSeeDashboard" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="204" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="11" time="0.102810">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">MosaicoWebTest::testAuthenticatedUserCanSeeDashboard&#13;
+Text 'Selecione uma coleção para acessá-la' is not seen in response.
+Failed asserting that false is true.
+&#13;
+D:\www\Mosaico\system\Test\TestResponse.php:421
+D:\www\Mosaico\tests\feature\MosaicoWebTest.php:218</failure>
+        </testcase>
+        <testcase name="testRepositoryCoreTablesExist" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="221" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="8" time="0.093033"/>
+        <testcase name="testCommunityListOffersCommunitySelection" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="233" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="13" time="0.107888">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">MosaicoWebTest::testCommunityListOffersCommunitySelection&#13;
+Text '/comunidades/ac7914ba-75bc-4f28-8f23-6d954d936573/colecoes/nova' is not seen in response.
+Failed asserting that false is true.
+&#13;
+D:\www\Mosaico\system\Test\TestResponse.php:421
+D:\www\Mosaico\tests\feature\MosaicoWebTest.php:262</failure>
+        </testcase>
+        <testcase name="testNewCollectionFormAcceptsARepresentativeImage" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="266" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="4" time="0.110750"/>
+        <testcase name="testAuthenticatedUserCanCreateCommunityAndBeAssignedAsAdministrator" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="283" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="6" time="0.117185"/>
+        <testcase name="testKeywordsCannotBeSharedAcrossCommunities" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="311" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="7" time="0.126243"/>
+        <testcase name="testCommunityDetailsOffersManagementActions" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="370" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="6" time="0.106745">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">MosaicoWebTest::testCommunityDetailsOffersManagementActions&#13;
+Text 'Coleções &lt;span class="nav-count"&gt;(1)&lt;/span&gt;' is not seen in response.
+Failed asserting that false is true.
+&#13;
+D:\www\Mosaico\system\Test\TestResponse.php:421
+D:\www\Mosaico\tests\feature\MosaicoWebTest.php:397</failure>
+        </testcase>
+        <testcase name="testCollectionPiecesPageOnlyShowsLinkedPieces" file="D:\www\Mosaico\tests\feature\MosaicoWebTest.php" line="411" class="MosaicoWebTest" classname="MosaicoWebTest" assertions="12" time="0.112793">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">MosaicoWebTest::testCollectionPiecesPageOnlyShowsLinkedPieces&#13;
+Text '/pecas/nova?collection=99880db3-f5a8-4f42-8062-fe5c0f960754' is not seen in response.
+Failed asserting that false is true.
+&#13;
+D:\www\Mosaico\system\Test\TestResponse.php:421
+D:\www\Mosaico\tests\feature\MosaicoWebTest.php:451</failure>
+        </testcase>
+      </testsuite>
+      <testsuite name="ExampleSessionTest" file="D:\www\Mosaico\tests\session\ExampleSessionTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.001764">
+        <testcase name="testSessionSimple" file="D:\www\Mosaico\tests\session\ExampleSessionTest.php" line="10" class="ExampleSessionTest" classname="ExampleSessionTest" assertions="1" time="0.001764"/>
+      </testsuite>
+      <testsuite name="HealthTest" file="D:\www\Mosaico\tests\unit\HealthTest.php" tests="2" assertions="3" errors="0" failures="0" skipped="0" time="0.004300">
+        <testcase name="testIsDefinedAppPath" file="D:\www\Mosaico\tests\unit\HealthTest.php" line="12" class="HealthTest" classname="HealthTest" assertions="1" time="0.001841"/>
+        <testcase name="testBaseUrlHasBeenSet" file="D:\www\Mosaico\tests\unit\HealthTest.php" line="17" class="HealthTest" classname="HealthTest" assertions="2" time="0.002459"/>
+      </testsuite>
+      <testsuite name="OllamaImageDescriberTest" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" tests="8" assertions="43" errors="0" failures="0" skipped="0" time="3.926131">
+        <testcase name="testSendsImageBytesAndParsesDescription" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" line="35" class="OllamaImageDescriberTest" classname="OllamaImageDescriberTest" assertions="11" time="0.324661"/>
+        <testcase name="testRejectsPathOutsideRepositoryBeforeNetworkRequest" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" line="59" class="OllamaImageDescriberTest" classname="OllamaImageDescriberTest" assertions="3" time="0.151664"/>
+        <testcase name="testRejectsInvalidAndIncompleteRemoteResponses" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" line="68" class="OllamaImageDescriberTest" classname="OllamaImageDescriberTest" assertions="6" time="1.174084"/>
+        <testcase name="testNetworkFailureDoesNotExposeConnectionDetails" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" line="89" class="OllamaImageDescriberTest" classname="OllamaImageDescriberTest" assertions="2" time="0.318685"/>
+        <testcase name="testRejectsInvalidImageBeforeNetworkRequest" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" line="98" class="OllamaImageDescriberTest" classname="OllamaImageDescriberTest" assertions="3" time="0.149739"/>
+        <testcase name="testPeopleDetectionUsesSchemaAndOnlyReturnsVisibleAttributes" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" line="108" class="OllamaImageDescriberTest" classname="OllamaImageDescriberTest" assertions="9" time="0.319534"/>
+        <testcase name="testPeopleDetectionAcceptsZeroAndUnknownCount" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" line="126" class="OllamaImageDescriberTest" classname="OllamaImageDescriberTest" assertions="4" time="0.486479"/>
+        <testcase name="testPeopleDetectionRejectsMalformedResults" file="D:\www\Mosaico\tests\unit\OllamaImageDescriberTest.php" line="138" class="OllamaImageDescriberTest" classname="OllamaImageDescriberTest" assertions="5" time="1.001285"/>
+      </testsuite>
+      <testsuite name="RangeFileResponseTest" file="D:\www\Mosaico\tests\unit\RangeFileResponseTest.php" tests="2" assertions="8" errors="0" failures="0" skipped="0" time="0.008476">
+        <testcase name="testStreamsFileWithoutLoadingItIntoResponseBody" file="D:\www\Mosaico\tests\unit\RangeFileResponseTest.php" line="26" class="RangeFileResponseTest" classname="RangeFileResponseTest" assertions="4" time="0.004488"/>
+        <testcase name="testStreamsRequestedByteRange" file="D:\www\Mosaico\tests\unit\RangeFileResponseTest.php" line="38" class="RangeFileResponseTest" classname="RangeFileResponseTest" assertions="4" time="0.003989"/>
       </testsuite>
     </testsuite>
   </testsuite>
