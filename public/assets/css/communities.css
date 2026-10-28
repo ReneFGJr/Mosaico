@@ -611,5 +611,7 @@ body.upload-result-open { overflow: hidden; }
 .upload-result-body { padding: 0 1.5rem; min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; line-height: 1.6; }
 .upload-result-files { list-style: none; padding: 0; }
 .upload-result-files li { padding: .75rem 0; border-bottom: 1px solid #ddd; }
-.upload-result-files span { display: block; }
+.upload-result-files span { display: inline; }
+.upload-result-success { color: #237a3b; }
+.upload-result-warning { color: #a64b00; }
 .upload-result-actions { margin: 0; border-top: 1px solid #ddd; display: flex; justify-content: flex-end; }

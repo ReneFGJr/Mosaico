@@ -479,6 +479,7 @@ final class Collections extends BaseController
         );
 
         $created = 0;
+        $createdFiles = [];
         $restored = 0;
         $restoredFiles = [];
         $errors = [];
@@ -581,10 +582,12 @@ final class Collections extends BaseController
             }
             (new AuditLogger())->record('collection.file_uploaded', 'collection', $id, ['file_id' => $fileId, 'piece_id' => $pieceId, 'sha256' => $checksum, 'original_name' => $originalName, 'term_ids' => $termIds]);
             $created++;
+            $createdFiles[] = $originalName;
         }
 
         return redirect()->to('/colecoes/' . $id)->with('upload_result', [
             'created' => $created,
+            'created_files' => $createdFiles,
             'restored' => $restored,
             'duplicates' => $restoredFiles,
             'errors' => $errors,

@@ -184,6 +184,14 @@ final class CollectionActionsTest extends CIUnitTestCase
             $db->table('assets')->insert(['id' => '30000000-0000-4000-8000-000000000001', 'piece_id' => $pieceId, 'name' => '001A', 'type' => 'imagem']);
             $db->table('asset_versions')->insert(['id' => '40000000-0000-4000-8000-000000000001', 'asset_id' => '30000000-0000-4000-8000-000000000001', 'version_number' => 1, 'change_notes' => 'Original']);
             $db->table('repository_files')->insert(['id' => '50000000-0000-4000-8000-000000000001', 'version_id' => '40000000-0000-4000-8000-000000000001', 'original_name' => '001A.jpg', 'storage_key' => 'repository/test/001A.jpg', 'mime_type' => 'image/jpeg', 'size_bytes' => filesize($temporary), 'sha256' => hash_file('sha256', $temporary)]);
+            $vocabulary = '60000000-0000-4000-8000-000000000001';
+            $oldTerm = '70000000-0000-4000-8000-000000000001';
+            $newTerm = '70000000-0000-4000-8000-000000000002';
+            $db->table('vocabularies')->insert(['id' => $vocabulary, 'project_id' => $this->collection['project_id'], 'code' => 'UPLOAD', 'name' => 'Assuntos']);
+            foreach ([$oldTerm => 'Anterior', $newTerm => 'Adicional'] as $termId => $label) {
+                $db->table('terms')->insert(['id' => $termId, 'vocabulary_id' => $vocabulary, 'code' => $termId, 'label' => $label, 'is_active' => true]);
+            }
+            $db->table('piece_terms')->insert(['piece_id' => $pieceId, 'term_id' => $oldTerm]);
             $file = $this->createMock(\CodeIgniter\HTTP\Files\UploadedFile::class);
             $file->method('getClientName')->willReturn('001D.jpg');
             $file->method('getClientExtension')->willReturn('jpg');
@@ -195,7 +203,7 @@ final class CollectionActionsTest extends CIUnitTestCase
             $file->expects($this->never())->method('move');
             $request = $this->createMock(\CodeIgniter\HTTP\IncomingRequest::class);
             $request->method('getFileMultiple')->willReturn([$file]);
-            $request->method('getPost')->willReturnCallback(static fn ($key) => $key === 'term_ids' ? [] : '');
+            $request->method('getPost')->willReturnCallback(static fn ($key) => $key === 'term_ids' ? [$oldTerm, $newTerm] : 'Nova palavra');
             $controller = new \App\Controllers\Collections();
             $controller->initController($request, service('response'), service('logger'));
             $response = $controller->upload($this->collection['id']);
@@ -208,6 +216,16 @@ final class CollectionActionsTest extends CIUnitTestCase
             $saved = $db->table('pieces')->where('id', $pieceId)->get()->getRowArray();
             $this->assertSame('draft', $saved['status']);
             $this->assertSame('001A.jpg', $saved['original_filename']);
+            $this->assertSame(3, $db->table('piece_terms')->where('piece_id', $pieceId)->countAllResults());
+            foreach ([$oldTerm, $newTerm] as $termId) {
+                $this->assertSame(1, $db->table('piece_terms')->where(['piece_id' => $pieceId, 'term_id' => $termId])->countAllResults());
+            }
+            $typedTerm = $db->table('terms')->where('label', 'Nova palavra')->get()->getRowArray();
+            $this->assertNotNull($typedTerm);
+            $this->assertSame(1, $db->table('piece_terms')->where(['piece_id' => $pieceId, 'term_id' => $typedTerm['id']])->countAllResults());
+            $controller->upload($this->collection['id']);
+            $this->assertSame(3, $db->table('piece_terms')->where('piece_id', $pieceId)->countAllResults());
+
             $page = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste', 'upload_result' => session('upload_result')])->get('/comunidades/' . $this->collection['project_id']);
             $page->assertSee('data-upload-result');
             $page->assertSee('upload-result-body');
@@ -215,6 +233,7 @@ final class CollectionActionsTest extends CIUnitTestCase
             $page->assertSee('1 arquivo já existe na comunidade');
             $page->assertSee('001D.jpg');
             $page->assertSee('Mesmo conteúdo de 001A.jpg.');
+            $page->assertSee('Palavras-chave aplicadas à peça original.');
         } finally {
             unlink($temporary);
         }
