@@ -452,6 +452,7 @@ final class Collections extends BaseController
 
     public function upload(string $id)
     {
+        set_time_limit(180);
         $db = db_connect();
         $collection = $db->table('collections')->where('collections.deleted_at', null)
             ->select('collections.*, projects.status AS community_status')
