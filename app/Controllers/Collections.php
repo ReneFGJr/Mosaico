@@ -765,6 +765,7 @@ final class Collections extends BaseController
 
     private function canManage(string $projectId): bool
     {
+        if (\App\Libraries\SiteAdmin::isAdmin(session('user_id'))) return true;
         return db_connect()->table('memberships')
             ->join('roles', 'roles.id = memberships.role_id')
             ->where('memberships.project_id', $projectId)

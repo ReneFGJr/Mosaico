@@ -15,6 +15,8 @@ class ProjectAccess
 
     public function allows(string $userId, string $projectId, string $permissionCode): bool
     {
+        if (SiteAdmin::isAdmin($userId)) return true;
+
         $grant = $this->db->table('memberships')
             ->select('permissions.id')
             ->join('roles', 'roles.id = memberships.role_id')

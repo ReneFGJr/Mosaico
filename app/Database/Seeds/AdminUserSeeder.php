@@ -27,6 +27,7 @@ final class AdminUserSeeder extends Seeder
         $this->db->table('users')->insert([
             'id'            => UuidModel::generateUuid(),
             'email'         => self::EMAIL,
+            'is_admin'      => true,
             'display_name'  => 'Administrador',
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
             'is_active'     => true,

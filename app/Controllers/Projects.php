@@ -231,6 +231,7 @@ final class Projects extends BaseController
 
     private function canManage(string $projectId, bool $administratorOnly = false): bool
     {
+        if (\App\Libraries\SiteAdmin::isAdmin(session('user_id'))) return true;
         $roles = $administratorOnly ? ['administrator'] : ['administrator', 'repository_manager'];
         return db_connect()->table('memberships')->join('roles', 'roles.id = memberships.role_id')->where('memberships.project_id', $projectId)->where('memberships.user_id', session('user_id'))->whereIn('roles.code', $roles)->countAllResults() > 0;
     }

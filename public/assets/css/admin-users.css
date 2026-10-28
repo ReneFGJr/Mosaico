@@ -1,0 +1,7 @@
+.admin-user-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.admin-user-actions form { margin: 0; }
+.admin-user-form { max-width: 1000px; }
+.admin-user-form .admin-user-check { display: flex; align-items: center; gap: .6rem; }
+.admin-user-check input { width: auto; }
+.impersonation-banner { background: #fff0d4; color: #653300; border: 2px solid #bd6500; padding: 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.impersonation-banner form { margin: 0; }

@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="<?= base_url('assets/css/status-footer.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/buttons.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/navigation.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/admin-users.css') ?>">
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -24,6 +25,7 @@
             <summary><?= esc($firstName !== '' ? $firstName : 'Usuário') ?></summary>
             <div class="user-dropdown-panel">
                 <a href="<?= site_url('profile') ?>">Perfil</a>
+                <?php if (\App\Libraries\SiteAdmin::current()): ?><a href="<?= site_url('admin/users') ?>">Gerenciar usuários</a><?php endif ?>
                 <form method="post" action="<?= site_url('logout') ?>">
                     <?= csrf_field() ?>
                     <button type="submit">Sair</button>
@@ -63,6 +65,9 @@
 </aside>
 <?php endif ?>
 <main id="conteudo" class="content <?= esc($contentClass ?? '') ?> <?= session('user_id') ? '' : 'content-auth' ?>" tabindex="-1">
+    <?php if (session('impersonator_id')): ?>
+    <div class="impersonation-banner" role="status"><span>Você está acessando como <strong><?= esc(session('user_name')) ?></strong>.</span><form method="post" action="<?= site_url('admin/users/stop-impersonating') ?>"><?= csrf_field() ?><button class="button" type="submit">Voltar à minha conta</button></form></div>
+    <?php endif ?>
     <?= $this->renderSection('content') ?>
 </main>
 <?php if ($uploadResult = session('upload_result')): ?>

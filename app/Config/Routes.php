@@ -8,6 +8,13 @@ $routes->match(['get', 'post'], 'login', 'Auth::login');
 $routes->post('logout', 'Auth::logout', ['filter' => 'auth']);
 
 $routes->group('', ['filter' => 'auth'], static function ($routes): void {
+    $routes->get('admin/users', 'AdminUsers::index');
+    $routes->match(['get', 'post'], 'admin/users/new', 'AdminUsers::create');
+    $routes->post('admin/users/stop-impersonating', 'AdminUsers::stopImpersonating');
+    $routes->get('admin/users/(:segment)/delete', 'AdminUsers::confirmDelete/$1');
+    $routes->post('admin/users/(:segment)/delete', 'AdminUsers::delete/$1');
+    $routes->post('admin/users/(:segment)/impersonate', 'AdminUsers::impersonate/$1');
+    $routes->match(['get', 'post'], 'admin/users/(:segment)', 'AdminUsers::edit/$1');
     $routes->get('profile', 'Profile::index');
     $routes->post('profile/password', 'Profile::password');
     $routes->get('painel', 'Dashboard::index');

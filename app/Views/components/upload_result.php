@@ -14,7 +14,7 @@
             <p>Encontramos os mesmos conteúdos no acervo. As peças existentes foram restauradas para rascunho (Draft) e estão disponíveis nesta coleção. As palavras-chave selecionadas foram acrescentadas às peças originais, mantendo as anteriores. Nenhuma cópia extra foi criada.</p>
             <ul class="upload-result-files upload-result-warning">
                 <?php foreach ($result['duplicates'] as $file): ?>
-                    <li><strong><?= esc($file['submitted']) ?></strong> — <span>Mesmo conteúdo de <?= esc($file['existing']) ?>. Palavras-chave aplicadas à peça original.</span></li>
+                    <li><strong><?= esc($file['submitted']) ?></strong> — <span>Mesmo conteúdo de <?= esc($file['existing']) ?>. A peça voltou a aparecer nesta coleção. Palavras-chave aplicadas à peça original.</span></li>
                 <?php endforeach ?>
             </ul>
         <?php endif ?>

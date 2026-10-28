@@ -8,6 +8,9 @@ final class AuditLogger
 {
     public function record(string $action, string $entityType, ?string $entityId = null, array $details = []): void
     {
+        if (session('impersonator_id')) {
+            $details['impersonator_id'] = session('impersonator_id');
+        }
         db_connect()->table('audit_events')->insert([
             'id' => UuidModel::generateUuid(),
             'user_id' => session('user_id'),

@@ -1,0 +1,3 @@
+<?= $this->extend('layouts/main') ?><?= $this->section('content') ?>
+<section class="panel"><h1>Desativar usuário</h1><p>Deseja desativar <strong><?= esc($user['display_name']) ?></strong> (<?= esc($user['email']) ?>)?</p><p>A conta perderá o acesso ao sistema. O histórico e os arquivos serão preservados. Você pode reativá-la na edição do usuário.</p><form method="post" action="<?= site_url('admin/users/'.$user['id'].'/delete') ?>" class="admin-user-actions"><?= csrf_field() ?><button class="button" name="confirmed" value="1">Desativar usuário</button><a class="button secondary" href="<?= site_url('admin/users') ?>">Cancelar</a></form></section>
+<?= $this->endSection() ?>

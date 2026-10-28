@@ -1,0 +1,8 @@
+<?= $this->extend('layouts/main') ?><?= $this->section('content') ?>
+<div class="page-head"><div><p class="eyebrow">Administração</p><h1>Usuários</h1><p>Gerencie contas, perfis e acessos às comunidades e coleções.</p></div><a class="button" href="<?= site_url('admin/users/new') ?>">Novo usuário</a></div>
+<form class="collection-search" method="get"><label for="user-search">Buscar por nome ou e-mail</label><div><input id="user-search" name="q" type="search" value="<?= esc($query) ?>"><button class="button">Buscar</button></div></form>
+<div class="panel table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Ações</th></tr></thead><tbody>
+<?php foreach ($users as $user): ?><tr><td><a href="<?= site_url('admin/users/'.$user['id']) ?>"><?= esc($user['display_name']) ?></a></td><td><?= esc($user['email']) ?></td><td><?= $user['is_admin'] ? 'Administrador do sistema' : 'Usuário' ?></td><td><?= $user['is_active'] ? 'Ativo' : 'Inativo' ?></td><td><div class="admin-user-actions"><a href="<?= site_url('admin/users/'.$user['id']) ?>">Editar e perfis</a><?php if ($user['id'] !== session('user_id')): ?><?php if ($user['is_active']): ?><form method="post" action="<?= site_url('admin/users/'.$user['id'].'/impersonate') ?>"><?= csrf_field() ?><button class="link-button" type="submit">Acessar como</button></form><a href="<?= site_url('admin/users/'.$user['id'].'/delete') ?>">Desativar</a><?php endif ?><?php endif ?></div></td></tr><?php endforeach ?>
+<?php if (! $users): ?><tr><td colspan="5">Nenhum usuário encontrado.</td></tr><?php endif ?>
+</tbody></table></div>
+<?= $this->endSection() ?>

@@ -56,3 +56,12 @@ O servidor envia uma cópia JPEG da imagem, com proporção preservada e maior l
 O botão **Detectar pessoas** usa o mesmo serviço para estimar a quantidade e listar até 20 pessoas distinguíveis, descrevendo posições, roupas e ações visíveis. O resultado estruturado é validado antes de salvar. Usuários com `pieces.update` podem associar nomes manualmente a cada item; esses nomes não são enviados ao Ollama nem copiados para outras análises ou imagens. Novas detecções preservam os registros anteriores, e a página apresenta a análise mais recente do arquivo atual. Detecção e associação manual exigem POST com CSRF e geram eventos de auditoria sem registrar os nomes nos detalhes do evento. Execute `php spark migrate` para criar `piece_people_detections`.
 
 Os nomes associados usam um controle de autoridade por comunidade (`person_authorities`), com identificador estável, nome preferido e qualificador opcional para distinguir homônimos. Na imagem, selecione um registro existente ou preencha um novo nome e qualificador; diferenças apenas de espaços ou maiúsculas reutilizam o mesmo registro. `piece_person_authorities` vincula cada pessoa da análise ao registro escolhido. A migração converte as associações manuais anteriores, preservando seus textos originais. A seleção é validada no servidor para impedir vínculos com autoridades de outra comunidade. Os nomes são escolhidos manualmente e não são enviados ao modelo.
+
+
+## Administração de usuários
+
+Acesse `/admin/users` pelo menu do usuário, em **Gerenciar usuários**. O administrador do sistema pode cadastrar, editar, desativar e reativar contas, alterar senhas e configurar perfis por comunidade e acessos específicos às coleções (consulta ou consulta e envio). Desativar preserva o histórico. O administrador não pode desativar a própria conta nem remover seu próprio perfil administrativo.
+
+Execute `php spark migrate` para adicionar o perfil de administrador do sistema. A conta administrativa original da instalação (`admin@mosaico.local`) recebe esse perfil; administradores de comunidade continuam restritos às respectivas comunidades e não recebem acesso à administração global de usuários.
+
+**Acessar como** inicia uma sessão com os acessos do usuário selecionado. Um aviso informa a identidade atual e oferece **Voltar à minha conta**. A administração global de usuários fica bloqueada durante esse acesso. O início, o término e as ações realizadas nesse período registram a identidade administrativa na auditoria. Todas as alterações e trocas de identidade exigem POST com CSRF.

@@ -223,10 +223,20 @@ final class CollectionActionsTest extends CIUnitTestCase
             $typedTerm = $db->table('terms')->where('label', 'Nova palavra')->get()->getRowArray();
             $this->assertNotNull($typedTerm);
             $this->assertSame(1, $db->table('piece_terms')->where(['piece_id' => $pieceId, 'term_id' => $typedTerm['id']])->countAllResults());
+            // Simulate hiding the piece by removing it from this collection.
+            $db->table('piece_collections')->where(['piece_id' => $pieceId, 'collection_id' => $this->collection['id']])->delete();
+            $this->assertSame(0, $db->table('piece_collections')->where('piece_id', $pieceId)->countAllResults());
             $controller->upload($this->collection['id']);
+            $this->assertSame(1, $db->table('piece_collections')->where(['piece_id' => $pieceId, 'collection_id' => $this->collection['id']])->countAllResults());
+            $uploadResult = session('upload_result');
+            $visiblePage = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste'])->get('/colecoes/' . $this->collection['id']);
+            $visiblePage->assertStatus(200);
+            $visiblePage->assertSee('001A.jpg');
+            $this->assertSame(1, $db->table('pieces')->countAllResults());
+            $this->assertSame(1, $db->table('repository_files')->countAllResults());
             $this->assertSame(3, $db->table('piece_terms')->where('piece_id', $pieceId)->countAllResults());
 
-            $page = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste', 'upload_result' => session('upload_result')])->get('/comunidades/' . $this->collection['project_id']);
+            $page = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste', 'upload_result' => $uploadResult])->get('/comunidades/' . $this->collection['project_id']);
             $page->assertSee('data-upload-result');
             $page->assertSee('upload-result-body');
             $page->assertSee('Fechar');
