@@ -47,6 +47,17 @@ O menu lateral apresenta um sumário de palavras-chave agrupadas por categoria e
 
 Nas comunidades, os cards de coleção oferecem **Ações → Editar / Trocar imagem / Deletar** para usuários com `projects.manage`. Deletar exige confirmação e usa exclusão lógica (`collections.deleted_at`), preservando peças, vínculos, arquivos e auditoria. Coleções ocultas deixam de aparecer na navegação e não podem ser abertas, selecionadas ou modificadas pelas rotas de coleção. Execute `php spark migrate` após atualizar o projeto.
 
+## Vocabulário controlado
+
+Após atualizar, execute `php spark migrate` para criar a tabela de regras de substituição.
+Em **Ações → Vocabulário controlado**, cadastre pares como `#I → Indigena`, edite ou exclua regras.
+O vocabulário pertence à comunidade e exige permissão de administrador ou gestor do repositório.
+Use **Substituir em lote** para aplicar todas as regras às fotos de uma coleção ou de toda a comunidade,
+escolhendo palavras-chave, títulos ou ambos. As regras distinguem maiúsculas e minúsculas, respeitam
+limites de palavras e não encadeiam substituições na mesma execução. Tags existentes são reutilizadas
+sem duplicar vínculos; as outras fotos e os arquivos originais são preservados. Fotos compartilhadas
+entre coleções refletem a alteração em todas elas. Excluir uma regra não desfaz substituições anteriores.
+
 ## Descrição de imagens
 
 Execute `php spark migrate` para criar a tabela de descrições. Nas peças com prévia de imagem, usuários com a permissão `pieces.update` podem usar **Descrever Imagem**. A descrição é salva por arquivo, sem alterar o resumo da peça; versões novas não reutilizam a descrição da versão anterior. O texto gerado por IA deve ser revisado antes do uso.

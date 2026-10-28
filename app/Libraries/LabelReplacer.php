@@ -42,7 +42,14 @@ final class LabelReplacer
                     $label = $this->replace($term['label'], $rules);
                     if ($label === $term['label']) continue;
                     if (mb_strlen($label) > 190) throw new \RuntimeException('Uma substituição excede o limite de 190 caracteres da palavra-chave.');
-                    $preferred = $db->table('terms')->select('terms.id')->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')->where('vocabularies.project_id', $projectId)->where('terms.label', $label)->where('terms.is_active', 1)->orderBy('terms.id')->get()->getRowArray();
+                    $candidates = $db->table('terms')->select('terms.id, terms.label')->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')->where('vocabularies.project_id', $projectId)->where('terms.label', $label)->where('terms.is_active', 1)->orderBy('terms.id')->get()->getResultArray();
+                    $preferred = null;
+                    foreach ($candidates as $candidate) {
+                        if ($candidate['label'] === $label) {
+                            $preferred = ['id' => $candidate['id']];
+                            break;
+                        }
+                    }
                     if (! $preferred) {
                         $preferred = ['id' => UuidModel::generateUuid()];
                         $db->table('terms')->insert($preferred + ['vocabulary_id' => $term['vocabulary_id'], 'code' => $preferred['id'], 'label' => $label, 'is_active' => 1, 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')]);
