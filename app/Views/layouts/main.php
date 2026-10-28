@@ -65,6 +65,9 @@
 <main id="conteudo" class="content <?= esc($contentClass ?? '') ?> <?= session('user_id') ? '' : 'content-auth' ?>" tabindex="-1">
     <?= $this->renderSection('content') ?>
 </main>
+<?php if ($uploadResult = session('upload_result')): ?>
+<?= view('components/upload_result', ['result' => $uploadResult]) ?>
+<?php endif ?>
 <footer class="footer">
     <span class="footer-signature">MOSAICO — preservação, acesso e rastreabilidade.</span>
     <div class="system-status" aria-live="polite" aria-atomic="true">

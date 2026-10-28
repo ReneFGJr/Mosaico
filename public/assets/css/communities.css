@@ -599,3 +599,17 @@ td small {
 .collection-card-actions { display: flex; justify-content: flex-end; flex-shrink: 0; }
 .collection-card:has(.action-menu[open]) { position: relative; z-index: 2; }
 .action-menu-panel > a.danger-action { color: var(--error); }
+
+body.upload-result-open { overflow: hidden; }
+.upload-result { width: min(640px, calc(100vw - 2rem)); max-height: 85vh; max-height: 85dvh; margin: auto; padding: 0; border: 1px solid #ddd; border-radius: 16px; color: var(--text, #242424); background: var(--surface, #fff); box-shadow: 0 24px 80px #0004; }
+.upload-result[open] { display: flex; flex-direction: column; }
+.upload-result::backdrop { background: rgba(20, 20, 20, .65); }
+.upload-result header, .upload-result-actions { padding: 1.25rem 1.5rem; flex-shrink: 0; }
+.upload-result header { border-bottom: 1px solid #ddd; }
+.upload-result h2 { margin: 0; font-size: 1.4rem; }
+.upload-result h3 { font-size: 1.1rem; margin-top: 1.5rem; }
+.upload-result-body { padding: 0 1.5rem; min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; line-height: 1.6; }
+.upload-result-files { list-style: none; padding: 0; }
+.upload-result-files li { padding: .75rem 0; border-bottom: 1px solid #ddd; }
+.upload-result-files span { display: block; }
+.upload-result-actions { margin: 0; border-top: 1px solid #ddd; display: flex; justify-content: flex-end; }

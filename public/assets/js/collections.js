@@ -1,4 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const uploadResult = document.querySelector('[data-upload-result]');
+    if (uploadResult) {
+        uploadResult.showModal();
+        document.body.classList.add('upload-result-open');
+        uploadResult.addEventListener('close', () => {
+            document.body.classList.remove('upload-result-open');
+            document.querySelector('[data-upload-form] button[type="submit"]')?.focus({ preventScroll: true });
+        });
+    }
+
     const uploadWarning = document.querySelector('[data-status-warning]');
     if (uploadWarning) {
         uploadWarning.focus({ preventScroll: true });

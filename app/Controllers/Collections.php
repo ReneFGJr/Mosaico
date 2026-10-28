@@ -532,7 +532,7 @@ final class Collections extends BaseController
                 }
                 $this->attachTerms((string) $existingFile['piece_id'], $termIds);
                 (new AuditLogger())->record('collection.file_restored', 'collection', $id, ['file_id' => $existingFile['file_id'], 'piece_id' => $existingFile['piece_id'], 'sha256' => $checksum, 'submitted_name' => $originalName]);
-                $restoredFiles[] = $originalName . ': conteúdo idêntico ao arquivo ' . $existingFile['original_name'] . '. A peça existente foi restaurada para Draft e está disponível nesta coleção.';
+                $restoredFiles[] = ['submitted' => $originalName, 'existing' => $existingFile['original_name']];
                 $restored++;
                 continue;
             }
@@ -583,17 +583,12 @@ final class Collections extends BaseController
             $created++;
         }
 
-        if ($created === 0 && $restored === 0) {
-            return redirect()->back()->with('errors', $errors ?: ['Nenhum arquivo foi processado.']);
-        }
-        $message = $created > 0 ? $created . ($created === 1 ? ' arquivo enviado.' : ' arquivos enviados.') : '';
-        if ($restored > 0) {
-            $message .= ' Aviso: ' . $restored . ($restored === 1 ? ' arquivo já existe. ' : ' arquivos já existem. ') . implode(' ', $restoredFiles);
-        }
-        if ($errors !== []) {
-            $message .= ' Alguns arquivos foram rejeitados: ' . implode(' ', $errors);
-        }
-        return redirect()->to('/colecoes/' . $id)->with($restored > 0 || $errors !== [] ? 'warning' : 'success', trim($message));
+        return redirect()->to('/colecoes/' . $id)->with('upload_result', [
+            'created' => $created,
+            'restored' => $restored,
+            'duplicates' => $restoredFiles,
+            'errors' => $errors,
+        ]);
     }
 
     public function importGoogleDrive(string $id)

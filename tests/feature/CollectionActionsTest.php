@@ -200,18 +200,21 @@ final class CollectionActionsTest extends CIUnitTestCase
             $controller->initController($request, service('response'), service('logger'));
             $response = $controller->upload($this->collection['id']);
             $this->assertStringContainsString('/colecoes/' . $this->collection['id'], $response->getHeaderLine('Location'));
-            $this->assertStringContainsString('Aviso: 1 arquivo já existe.', session('warning'));
-            $this->assertStringContainsString('001D.jpg: conteúdo idêntico ao arquivo 001A.jpg', session('warning'));
+            $this->assertSame(1, session('upload_result')['restored']);
+            $this->assertSame(['submitted' => '001D.jpg', 'existing' => '001A.jpg'], session('upload_result')['duplicates'][0]);
             $this->assertSame(1, $db->table('repository_files')->countAllResults());
             $this->assertSame(1, $db->table('pieces')->countAllResults());
             $this->assertSame(1, $db->table('piece_collections')->where('piece_id', $pieceId)->where('collection_id', $this->collection['id'])->countAllResults());
             $saved = $db->table('pieces')->where('id', $pieceId)->get()->getRowArray();
             $this->assertSame('draft', $saved['status']);
             $this->assertSame('001A.jpg', $saved['original_filename']);
-            $page = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste', 'warning' => session('warning')])->get('/comunidades/' . $this->collection['project_id']);
-            $page->assertSee('status-warning');
-            $page->assertSee('data-status-warning');
-            $page->assertSee('Aviso: 1 arquivo já existe.');
+            $page = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste', 'upload_result' => session('upload_result')])->get('/comunidades/' . $this->collection['project_id']);
+            $page->assertSee('data-upload-result');
+            $page->assertSee('upload-result-body');
+            $page->assertSee('Fechar');
+            $page->assertSee('1 arquivo já existe na comunidade');
+            $page->assertSee('001D.jpg');
+            $page->assertSee('Mesmo conteúdo de 001A.jpg.');
         } finally {
             unlink($temporary);
         }
