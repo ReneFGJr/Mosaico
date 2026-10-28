@@ -21,18 +21,78 @@ document.addEventListener('DOMContentLoaded', () => {
         const submitButton = uploadForm.querySelector('button[type="submit"]');
         let uploading = false;
         uploadDialog.addEventListener('cancel', (event) => event.preventDefault());
-        uploadForm.addEventListener('submit', (event) => {
+        uploadForm.addEventListener('submit', async (event) => {
             if (event.defaultPrevented) return;
             if (uploading) {
                 event.preventDefault();
                 return;
             }
+            event.preventDefault();
             uploading = true;
             uploadDialog.showModal();
             uploadDialog.querySelector('h2').focus();
             document.body.classList.add('upload-in-progress');
             uploadForm.setAttribute('aria-busy', 'true');
             submitButton.disabled = true;
+            const files = [...uploadForm.querySelector('input[type="file"]').files];
+            const fields = new FormData(uploadForm);
+            fields.delete('files[]');
+            const description = uploadDialog.querySelector('p');
+            const result = { created: 0, restored: 0, created_files: [], duplicates: [], errors: [] };
+            let processed = 0;
+            try {
+                for (const file of files) {
+                    description.textContent = `Enviando ${processed + 1} de ${files.length}: ${file.name}`;
+                    const body = new FormData();
+                    for (const [name, value] of fields) body.append(name, value);
+                    body.append('files[]', file, file.name);
+                    const response = await fetch(uploadForm.action, {
+                        method: 'POST', body, headers: { Accept: 'application/json' },
+                    });
+                    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+                        throw new Error('O servidor interrompeu o envio. Confira sua sessão e os limites de tamanho.');
+                    }
+                    const data = await response.json();
+                    if (!data.result || !data.csrf) throw new Error('Resposta inesperada do servidor.');
+                    fields.set(data.csrf.name, data.csrf.hash);
+                    const csrfInput = uploadForm.elements.namedItem(data.csrf.name);
+                    if (csrfInput) csrfInput.value = data.csrf.hash;
+                    result.created += data.result.created;
+                    result.restored += data.result.restored;
+                    result.created_files.push(...data.result.created_files);
+                    result.duplicates.push(...data.result.duplicates);
+                    result.errors.push(...data.result.errors);
+                    processed++;
+                }
+            } catch (error) {
+                result.errors.push(error.message);
+                result.errors.push(`${files.length - processed} arquivo(s) sem confirmação de processamento. Você pode reenviar a seleção; conteúdos existentes serão reconhecidos.`);
+            }
+            uploadDialog.querySelector('h2').textContent = result.errors.length ? 'Envio finalizado com pendências' : 'Envio concluído';
+            description.textContent = `${processed} de ${files.length} arquivos processados. ${result.created} enviados com sucesso. ${result.restored} já existem na comunidade e foram restaurados para Draft.`;
+            const list = document.createElement('ul');
+            list.style.maxHeight = '45vh';
+            list.style.overflowY = 'auto';
+            const messages = [
+                ...result.created_files.map((name) => `${name} — Enviado com sucesso.`),
+                ...result.duplicates.map((file) => `${file.submitted} — Mesmo conteúdo de ${file.existing}. Restaurado para Draft; palavras-chave aplicadas.`),
+                ...result.errors,
+            ];
+            for (const message of messages) {
+                const item = document.createElement('li');
+                item.textContent = message;
+                list.append(item);
+            }
+            const finish = document.createElement('button');
+            finish.type = 'button';
+            finish.className = 'button';
+            finish.textContent = 'Concluir';
+            finish.addEventListener('click', () => window.location.reload());
+            uploadDialog.append(list, finish);
+            uploadDialog.querySelector('.upload-processing-spinner')?.remove();
+            document.body.classList.remove('upload-in-progress');
+            uploadForm.removeAttribute('aria-busy');
+            finish.focus();
         });
         window.addEventListener('pageshow', () => {
             uploading = false;

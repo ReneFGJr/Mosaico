@@ -586,13 +586,21 @@ final class Collections extends BaseController
             $createdFiles[] = $originalName;
         }
 
-        return redirect()->to('/colecoes/' . $id)->with('upload_result', [
+        $result = [
             'created' => $created,
             'created_files' => $createdFiles,
             'restored' => $restored,
             'duplicates' => $restoredFiles,
             'errors' => $errors,
-        ]);
+        ];
+        if ($this->request->getHeaderLine('Accept') === 'application/json') {
+            return $this->response->setJSON([
+                'result' => $result,
+                'csrf' => ['name' => csrf_token(), 'hash' => csrf_hash()],
+            ]);
+        }
+
+        return redirect()->to('/colecoes/' . $id)->with('upload_result', $result);
     }
 
     public function importGoogleDrive(string $id)
