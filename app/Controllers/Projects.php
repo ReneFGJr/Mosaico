@@ -229,6 +229,67 @@ final class Projects extends BaseController
         return redirect()->to('/comunidades')->with('success', 'Comunidade excluída logicamente. O histórico foi preservado.');
     }
 
+    public function vocabulary(string $id)
+    {
+        $db = db_connect();
+        $project = (new ProjectModel())->where('status !=', 'excluded')->find($id);
+        if (! $project || ! $this->canManage($id)) {
+            return redirect()->to('/comunidades')->with('error', 'Você não tem permissão para gerenciar este vocabulário.');
+        }
+        $url = '/comunidades/' . $id . '/vocabulario';
+        if ($this->request->getMethod() === 'POST') {
+            $action = (string) $this->request->getPost('action');
+            if ($action === 'apply') {
+                $collectionId = (string) $this->request->getPost('collection_id');
+                $target = (string) $this->request->getPost('target');
+                if (! in_array($target, ['tags', 'title', 'both'], true) || ($collectionId !== '' && ! $db->table('collections')->where(['id' => $collectionId, 'project_id' => $id, 'deleted_at' => null])->countAllResults())) {
+                    return redirect()->to($url)->with('error', 'Selecione um destino e uma coleção válidos desta comunidade.');
+                }
+                try {
+                    $count = (new \App\Libraries\LabelReplacer())->apply($id, $collectionId ?: null, $target);
+                } catch (\Throwable $exception) {
+                    $db->transRollback();
+                    log_message('error', 'Falha ao aplicar vocabulário: {message}', ['message' => $exception->getMessage()]);
+                    return redirect()->to($url)->with('error', 'Não foi possível substituir os labels. Nenhuma alteração foi confirmada. Verifique se os resultados respeitam o limite de 190 caracteres.');
+                }
+                return redirect()->to($url)->with('success', $count . ' foto(s) atualizada(s).');
+            }
+            $ruleId = (string) $this->request->getPost('rule_id');
+            if ($ruleId !== '' && ! $db->table('label_replacements')->where(['id' => $ruleId, 'project_id' => $id])->countAllResults()) {
+                return redirect()->to($url)->with('error', 'Termo não encontrado nesta comunidade.');
+            }
+            if ($action === 'delete' && $ruleId !== '') {
+                $db->table('label_replacements')->where(['id' => $ruleId, 'project_id' => $id])->delete();
+            } elseif ($action === 'save') {
+                $source = trim((string) $this->request->getPost('source'));
+                $replacement = trim((string) $this->request->getPost('replacement'));
+                if ($source === '' || $replacement === '' || $source === $replacement || mb_strlen($source) > 80 || mb_strlen($replacement) > 190 || preg_match('/[\x00-\x1F\x7F]/u', $source . $replacement)) {
+                    return redirect()->to($url)->with('error', 'Informe um termo de até 80 caracteres e uma substituição diferente de até 190 caracteres.');
+                }
+                $duplicate = $db->table('label_replacements')->where(['project_id' => $id, 'source' => $source]);
+                if ($ruleId !== '') $duplicate->where('id !=', $ruleId);
+                if ($duplicate->countAllResults()) return redirect()->to($url)->with('error', 'Este termo já está cadastrado. Edite a linha existente.');
+                $data = ['source' => $source, 'replacement' => $replacement];
+                if ($ruleId === '') {
+                    $ruleId = UuidModel::generateUuid();
+                    $db->table('label_replacements')->insert($data + ['id' => $ruleId, 'project_id' => $id]);
+                } else {
+                    $db->table('label_replacements')->where(['id' => $ruleId, 'project_id' => $id])->update($data);
+                }
+            } else {
+                return redirect()->to($url)->with('error', 'Ação inválida.');
+            }
+            (new AuditLogger())->record('community.vocabulary_' . ($action === 'delete' ? 'deleted' : 'saved'), 'community', $id, ['rule_id' => $ruleId]);
+            return redirect()->to($url)->with('success', 'Vocabulário atualizado.');
+        }
+        return view('projects/vocabulary', [
+            'title' => 'Vocabulário controlado', 'project' => $project,
+            'rules' => $db->table('label_replacements')->where('project_id', $id)->orderBy('source')->get()->getResultArray(),
+            'collections' => $db->table('collections')->where(['project_id' => $id, 'deleted_at' => null])->orderBy('name')->get()->getResultArray(),
+            'selectedCollection' => (string) $this->request->getGet('collection'),
+        ]);
+    }
+
     private function canManage(string $projectId, bool $administratorOnly = false): bool
     {
         if (\App\Libraries\SiteAdmin::isAdmin(session('user_id'))) return true;

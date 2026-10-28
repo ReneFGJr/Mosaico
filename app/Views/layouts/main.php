@@ -90,7 +90,7 @@
         <?php endif ?>
     </div>
 </footer>
-<script src="<?= base_url('assets/js/collections.js') ?>" defer></script>
+<script src="<?= base_url('assets/js/collections.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/collections.js') ?>" defer></script>
 <script src="<?= base_url('assets/js/user-menu.js') ?>" defer></script>
 </body>
 </html>

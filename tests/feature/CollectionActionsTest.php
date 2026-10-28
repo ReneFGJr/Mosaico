@@ -229,6 +229,13 @@ final class CollectionActionsTest extends CIUnitTestCase
             $controller->upload($this->collection['id']);
             $this->assertSame(1, $db->table('piece_collections')->where(['piece_id' => $pieceId, 'collection_id' => $this->collection['id']])->countAllResults());
             $uploadResult = session('upload_result');
+            $request->method('getHeaderLine')->willReturnCallback(static fn ($name) => $name === 'Accept' ? 'application/json' : '');
+            $jsonResponse = $controller->upload($this->collection['id']);
+            $json = json_decode($jsonResponse->getBody(), true, 512, JSON_THROW_ON_ERROR);
+            $this->assertSame(1, $json['result']['restored']);
+            $this->assertSame(0, $json['result']['created']);
+            $this->assertSame(csrf_token(), $json['csrf']['name']);
+            $this->assertSame(csrf_hash(), $json['csrf']['hash']);
             $visiblePage = $this->withSession(['user_id' => $this->userId, 'user_name' => 'Pessoa teste'])->get('/colecoes/' . $this->collection['id']);
             $visiblePage->assertStatus(200);
             $visiblePage->assertSee('001A.jpg');
