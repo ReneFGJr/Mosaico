@@ -246,13 +246,17 @@ final class Projects extends BaseController
                     return redirect()->to($url)->with('error', 'Selecione um destino e uma coleção válidos desta comunidade.');
                 }
                 try {
-                    $count = (new \App\Libraries\LabelReplacer())->apply($id, $collectionId ?: null, $target);
+                    $result = (new \App\Libraries\LabelReplacer())->apply($id, $collectionId ?: null, $target);
                 } catch (\Throwable $exception) {
                     $db->transRollback();
                     log_message('error', 'Falha ao aplicar vocabulário: {message}', ['message' => $exception->getMessage()]);
                     return redirect()->to($url)->with('error', 'Não foi possível substituir os labels. Nenhuma alteração foi confirmada. Verifique se os resultados respeitam o limite de 190 caracteres.');
                 }
-                return redirect()->to($url)->with('success', $count . ' foto(s) atualizada(s).');
+                return redirect()->to($url)->with('success', sprintf(
+                    '%d termo(s) substituído(s) em %d foto(s).',
+                    $result['terms_replaced'],
+                    $result['photos'],
+                ));
             }
             $ruleId = (string) $this->request->getPost('rule_id');
             if ($ruleId !== '' && ! $db->table('label_replacements')->where(['id' => $ruleId, 'project_id' => $id])->countAllResults()) {

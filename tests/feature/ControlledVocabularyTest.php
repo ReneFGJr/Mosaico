@@ -81,6 +81,7 @@ final class ControlledVocabularyTest extends CIUnitTestCase
         $db->table('piece_collections')->insert(['piece_id' => $photo, 'collection_id' => $this->collection]);
         $this->requestVocabulary(['action' => 'save', 'source' => '#I', 'replacement' => 'Indigena']);
         $this->requestVocabulary(['action' => 'apply', 'target' => 'both', 'collection_id' => $this->collection])->assertRedirect();
+        $this->assertSame('2 termo(s) substituído(s) em 1 foto(s).', session('success'));
         $this->assertSame('Indigena e #II', $db->table('pieces')->where('id', $photo)->get()->getRowArray()['title']);
         $this->assertSame('#I e #II', $db->table('pieces')->where('id', $other)->get()->getRowArray()['title']);
         $this->assertSame(1, $db->table('piece_terms')->where('piece_id', $photo)->countAllResults());
@@ -89,7 +90,10 @@ final class ControlledVocabularyTest extends CIUnitTestCase
         $this->requestVocabulary(['action' => 'apply', 'target' => 'tags', 'collection_id' => 'invalid'])->assertRedirect();
         $this->assertSame($source, $db->table('piece_terms')->where('piece_id', $other)->get()->getRowArray()['term_id']);
         $this->requestVocabulary(['action' => 'apply', 'target' => 'tags', 'collection_id' => ''])->assertRedirect();
+        $this->assertSame('1 termo(s) substituído(s) em 1 foto(s).', session('success'));
         $this->assertSame($target, $db->table('piece_terms')->where('piece_id', $other)->get()->getRowArray()['term_id']);
+        $this->requestVocabulary(['action' => 'apply', 'target' => 'tags', 'collection_id' => ''])->assertRedirect();
+        $this->assertSame('0 termo(s) substituído(s) em 0 foto(s).', session('success'));
     }
 
     public function testReplacementUsesWordBoundariesAndDoesNotCascade(): void
@@ -97,6 +101,8 @@ final class ControlledVocabularyTest extends CIUnitTestCase
         $replacer = new \App\Libraries\LabelReplacer();
         $rules = [['source' => '#I', 'replacement' => 'Indigena'], ['source' => 'Indigena', 'replacement' => 'Outro']];
         $this->assertSame('Indigena, #II; Outro #i', $replacer->replace('#I, #II; Indigena #i', $rules));
+        $this->assertSame('Indigena e Indigena #II', $replacer->replace('#I e #I #II', $rules, $count));
+        $this->assertSame(2, $count);
     }
 
     public function testRulesAndCollectionsFromAnotherCommunityCannotBeChanged(): void

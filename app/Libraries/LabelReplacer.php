@@ -6,16 +6,17 @@ use App\Models\UuidModel;
 
 final class LabelReplacer
 {
-    public function replace(string $text, array $rules): string
+    public function replace(string $text, array $rules, ?int &$replacements = null): string
     {
+        $replacements = 0;
         if ($rules === []) return $text;
         $map = array_column($rules, 'replacement', 'source');
         uksort($map, static fn ($a, $b) => strlen($b) <=> strlen($a));
         $pattern = '~(?<![\p{L}\p{N}_])(?:' . implode('|', array_map(static fn ($s) => preg_quote($s, '~'), array_keys($map))) . ')(?![\p{L}\p{N}_])~u';
-        return preg_replace_callback($pattern, static fn ($match) => $map[$match[0]], $text);
+        return preg_replace_callback($pattern, static fn ($match) => $map[$match[0]], $text, -1, $replacements);
     }
 
-    public function apply(string $projectId, ?string $collectionId, string $target): int
+    public function apply(string $projectId, ?string $collectionId, string $target): array
     {
         $db = db_connect();
         $rules = $db->table('label_replacements')->where('project_id', $projectId)->get()->getResultArray();
@@ -23,13 +24,15 @@ final class LabelReplacer
         if ($collectionId !== null) $query->join('piece_collections', 'piece_collections.piece_id = pieces.id')->where('piece_collections.collection_id', $collectionId);
         $pieces = $query->get()->getResultArray();
         $count = 0;
+        $termsReplaced = 0;
         $db->transException(true)->transStart();
         foreach ($pieces as $piece) {
             $changed = false;
             if (in_array($target, ['title', 'both'], true)) {
-                $title = $this->replace($piece['title'], $rules);
+                $title = $this->replace($piece['title'], $rules, $occurrences);
                 if (mb_strlen($title) > 190) throw new \RuntimeException('Uma substituição excede o limite de 190 caracteres do título.');
                 if ($title !== $piece['title']) {
+                    $termsReplaced += $occurrences;
                     $db->table('pieces')->where('id', $piece['id'])->update(['title' => $title, 'updated_at' => date('Y-m-d H:i:s')]);
                     $changed = true;
                 }
@@ -39,8 +42,9 @@ final class LabelReplacer
                 $preferredIds = [];
                 $removedIds = [];
                 foreach ($terms as $term) {
-                    $label = $this->replace($term['label'], $rules);
+                    $label = $this->replace($term['label'], $rules, $occurrences);
                     if ($label === $term['label']) continue;
+                    $termsReplaced += $occurrences;
                     if (mb_strlen($label) > 190) throw new \RuntimeException('Uma substituição excede o limite de 190 caracteres da palavra-chave.');
                     $candidates = $db->table('terms')->select('terms.id, terms.label')->join('vocabularies', 'vocabularies.id = terms.vocabulary_id')->where('vocabularies.project_id', $projectId)->where('terms.label', $label)->where('terms.is_active', 1)->orderBy('terms.id')->get()->getResultArray();
                     $preferred = null;
@@ -65,8 +69,8 @@ final class LabelReplacer
             }
             if ($changed) $count++;
         }
-        (new AuditLogger())->record('community.labels_replaced', 'community', $projectId, ['collection_id' => $collectionId, 'target' => $target, 'count' => $count]);
+        (new AuditLogger())->record('community.labels_replaced', 'community', $projectId, ['collection_id' => $collectionId, 'target' => $target, 'count' => $count, 'terms_replaced' => $termsReplaced]);
         $db->transComplete();
-        return $count;
+        return ['photos' => $count, 'terms_replaced' => $termsReplaced];
     }
 }
